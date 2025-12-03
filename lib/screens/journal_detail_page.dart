@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:io';
 import '../helpers/journal_service.dart';
 import '../helpers/supabase_helper.dart';
 import '../helpers/location_helper.dart';
@@ -360,8 +361,8 @@ class _JournalDetailPageState extends State<JournalDetailPage> {
                           ClipRRect(
                             borderRadius: BorderRadius.circular(12),
                             child: isLocalFile 
-                              ? Image.network(
-                                  'file://$path',
+                              ? Image.file(
+                                  File(path),
                                   width: 250,
                                   height: 250,
                                   fit: BoxFit.cover,
