@@ -48,37 +48,51 @@ class SupabaseHelper {
   // Sign Out
   Future<void> signOut() async {
     await client.auth.signOut();
-  }
-  // Upload foto ke Storage
+  }  // Upload foto ke Storage
   Future<String> uploadPhoto(String filePath, String fileName) async {
-    final bytes = Uint8List.fromList(await _readFileBytes(filePath));
-    
-    final String fullPath = '${currentUserId}/$fileName';
-    
-    await client.storage.from('journal-photos').uploadBinary(
-      fullPath,
-      bytes,
-      fileOptions: const FileOptions(
-        cacheControl: '3600',
-        upsert: true,
-      ),
-    );
+    try {
+      print("[SUPABASE] 🔍 Starting upload from: $filePath");
+      
+      final bytes = Uint8List.fromList(await _readFileBytes(filePath));
+      
+      // Upload langsung ke root bucket (tidak pakai subfolder user)
+      final String fullPath = fileName;
+        print("[SUPABASE] 📤 Uploading to bucket: journal-photos");
+      print("[SUPABASE] 📁 Path: $fullPath");
+      print("[SUPABASE] 📦 File size: ${bytes.length} bytes");
+        // Upload dengan content type eksplisit
+      final response = await client.storage.from('journal-photos').uploadBinary(
+        fullPath,
+        bytes,
+        fileOptions: FileOptions(
+          cacheControl: '3600',
+          upsert: true,
+          contentType: 'image/jpeg', // Eksplisit set content type
+        ),
+      );      print("[SUPABASE] 📡 Upload response: $response");
 
-    // Get public URL
-    final String publicUrl = client.storage
-        .from('journal-photos')
-        .getPublicUrl(fullPath);
+      // Get public URL
+      final String publicUrl = client.storage
+          .from('journal-photos')
+          .getPublicUrl(fullPath);
 
-    return publicUrl;
+      print("[SUPABASE] ✅ Upload success!");
+      print("[SUPABASE] 🔗 Public URL: $publicUrl");
+      return publicUrl;
+    } catch (e, stackTrace) {
+      print("[SUPABASE] ❌ Upload FAILED!");
+      print("[SUPABASE] ❌ Error: $e");
+      print("[SUPABASE] ❌ Error type: ${e.runtimeType}");
+      print("[SUPABASE] ❌ Stack trace: $stackTrace");
+      rethrow;
+    }
   }
 
   // Delete foto dari Storage
   Future<void> deletePhoto(String photoUrl) async {
-    try {
-      // Extract path from URL
+    try {      // Extract path from URL
       final uri = Uri.parse(photoUrl);
-      final path = uri.pathSegments.last;
-      
+      final path = uri.pathSegments.last;      
       await client.storage.from('journal-photos').remove([path]);
     } catch (e) {
       print("[SUPABASE] Error deleting photo: $e");

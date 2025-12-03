@@ -201,16 +201,28 @@ class _AddJournalPageState extends State<AddJournalPage> {
 
       if (journalId == null) {
         throw Exception('Failed to create journal');
-      }
-
-      // Upload photos
-      for (String localPath in _imagePaths) {
-        final fileName = 'photo_${DateTime.now().millisecondsSinceEpoch}.jpg';
-        final photoUrl = await _supabaseHelper.uploadPhoto(localPath, fileName);
-        await _journalService.addPhotoToJournal(
-          journalId: journalId,
-          photoUrl: photoUrl,
-        );
+      }      // Upload photos
+      for (int i = 0; i < _imagePaths.length; i++) {
+        String localPath = _imagePaths[i];
+        print("[ADD_JOURNAL] 📸 Uploading photo ${i + 1}/${_imagePaths.length}: $localPath");
+        
+        try {
+          final fileName = 'photo_${DateTime.now().millisecondsSinceEpoch}_$i.jpg';
+          final photoUrl = await _supabaseHelper.uploadPhoto(localPath, fileName);
+          
+          print("[ADD_JOURNAL] ✅ Photo uploaded: $photoUrl");
+          
+          await _journalService.addPhotoToJournal(
+            journalId: journalId,
+            photoUrl: photoUrl,
+          );
+          
+          print("[ADD_JOURNAL] ✅ Photo linked to journal");
+        } catch (photoError) {
+          print("[ADD_JOURNAL] ❌ Photo upload failed: $photoError");
+          print("[ADD_JOURNAL] ❌ Photo error type: ${photoError.runtimeType}");
+          // Continue uploading other photos even if one fails
+        }
       }
 
       await _notificationHelper.showJournalSavedNotification();

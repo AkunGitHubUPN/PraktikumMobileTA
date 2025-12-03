@@ -1,11 +1,11 @@
 import 'supabase_helper.dart';
+import 'user_session.dart';
 
 class JournalService {
   JournalService._privateConstructor();
   static final JournalService instance = JournalService._privateConstructor();
 
   final _supabase = SupabaseHelper.client;
-
   // Create Journal
   Future<String?> createJournal({
     required String judul,
@@ -16,7 +16,7 @@ class JournalService {
     String? namaLokasi,
   }) async {
     try {
-      final userId = SupabaseHelper.instance.currentUserId;
+      final userId = UserSession.instance.currentUserId; // ← FIX: Pakai UserSession
       if (userId == null) throw Exception('User not logged in');
 
       final response = await _supabase.from('journals').insert({
@@ -36,11 +36,10 @@ class JournalService {
       return null;
     }
   }
-
   // Get Journals for Current User
   Future<List<Map<String, dynamic>>> getJournalsForUser() async {
     try {
-      final userId = SupabaseHelper.instance.currentUserId;
+      final userId = UserSession.instance.currentUserId; // ← FIX: Pakai UserSession
       if (userId == null) return [];
 
       final response = await _supabase
