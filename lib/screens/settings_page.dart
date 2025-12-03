@@ -159,7 +159,7 @@ class _SettingsPageState extends State<SettingsPage> {
                         'Minta passkey saat aplikasi dibuka',
                       ),
                       value: _isLockEnabled,
-                      activeColor: const Color(0xFFFF6B4A),
+                      activeThumbColor: const Color(0xFFFF6B4A),
                       onChanged: _onLockEnabledChanged,
                     ),
                     if (_isLockEnabled) ...[
@@ -197,7 +197,7 @@ class _SettingsPageState extends State<SettingsPage> {
                         'Aktifkan notifikasi di perangkat ini',
                       ),
                       value: _isNotificationEnabled,
-                      activeColor: const Color(0xFFFF6B4A),
+                      activeThumbColor: const Color(0xFFFF6B4A),
                       onChanged: _onNotificationEnabledChanged,
                     ),
                   ],

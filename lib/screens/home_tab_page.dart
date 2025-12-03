@@ -207,7 +207,7 @@ class HomeTabPageState extends State<HomeTabPage> {
                   SwitchListTile(
                     title: const Text('Hanya tampilkan yang memiliki foto'),
                     value: tempFoto,
-                    activeColor: const Color(0xFFFF6B4A),
+                    activeThumbColor: const Color(0xFFFF6B4A),
                     onChanged: (val) {
                       setModalState(() {
                         tempFoto = val;
@@ -217,7 +217,7 @@ class HomeTabPageState extends State<HomeTabPage> {
                   SwitchListTile(
                     title: const Text('Hanya tampilkan yang memiliki lokasi'),
                     value: tempLokasi,
-                    activeColor: const Color(0xFFFF6B4A),
+                    activeThumbColor: const Color(0xFFFF6B4A),
                     onChanged: (val) {
                       setModalState(() {
                         tempLokasi = val;
