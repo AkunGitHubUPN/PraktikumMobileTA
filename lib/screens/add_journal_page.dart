@@ -34,6 +34,7 @@ class _AddJournalPageState extends State<AddJournalPage> {
   List<String> _imagePaths = [];
   
   DateTime _selectedDate = DateTime.now();
+  String _selectedPrivacy = 'public'; // NEW: Privacy selector
 
   @override
   void initState() {
@@ -186,9 +187,7 @@ class _AddJournalPageState extends State<AddJournalPage> {
       context: context,
       barrierDismissible: false,
       builder: (context) => const Center(child: CircularProgressIndicator()),
-    );
-
-    try {
+    );    try {
       // Create journal
       final journalId = await _journalService.createJournal(
         judul: judul,
@@ -197,11 +196,12 @@ class _AddJournalPageState extends State<AddJournalPage> {
         latitude: _currentPosition?.latitude,
         longitude: _currentPosition?.longitude,
         namaLokasi: _addressString,
+        privacy: _selectedPrivacy, // NEW: Pass privacy setting
       );
 
       if (journalId == null) {
         throw Exception('Failed to create journal');
-      }      // Upload photos
+      }// Upload photos
       for (int i = 0; i < _imagePaths.length; i++) {
         String localPath = _imagePaths[i];
         print("[ADD_JOURNAL] 📸 Uploading photo ${i + 1}/${_imagePaths.length}: $localPath");
@@ -447,6 +447,51 @@ class _AddJournalPageState extends State<AddJournalPage> {
                           const Icon(Icons.calendar_today, color: Color(0xFFFF6B4A)),
                         ],
                       ),
+                    ),                  ),
+                  const SizedBox(height: 16),
+                  // NEW: Privacy Selector
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey[400]!),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.lock_outline, color: Color(0xFFFF6B4A)),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Privasi Jurnal',
+                                style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                              ),
+                              DropdownButton<String>(
+                                value: _selectedPrivacy,
+                                isExpanded: true,
+                                underline: const SizedBox(),
+                                items: const [
+                                  DropdownMenuItem(
+                                    value: 'public',
+                                    child: Text('Public - Teman dapat melihat'),
+                                  ),
+                                  DropdownMenuItem(
+                                    value: 'private',
+                                    child: Text('Private - Hanya saya'),
+                                  ),
+                                ],
+                                onChanged: (value) {
+                                  setState(() {
+                                    _selectedPrivacy = value!;
+                                  });
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                   const SizedBox(height: 24),

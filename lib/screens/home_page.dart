@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'utilities_page.dart';
 import 'settings_page.dart';
 import 'home_tab_page.dart';
+import 'friends_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -11,15 +12,13 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  int _selectedIndex = 0;
-
-  late final List<Widget> _pages;
-
+  int _selectedIndex = 0;  late final List<Widget> _pages;
   @override
   void initState() {
     super.initState();
     _pages = [
       const HomeTabPage(),
+      const FriendsPage(),
       const UtilitiesPage(),
       const SettingsPage(),
     ];
@@ -57,12 +56,16 @@ class _HomePageState extends State<HomePage> {
           ),
           unselectedLabelStyle: const TextStyle(
             fontSize: 12,
-          ),
-          items: const <BottomNavigationBarItem>[
+          ),          items: const <BottomNavigationBarItem>[
             BottomNavigationBarItem(
               icon: Icon(Icons.home_outlined),
               activeIcon: Icon(Icons.home),
               label: 'Beranda',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.people_outline),
+              activeIcon: Icon(Icons.people),
+              label: 'Teman',
             ),
             BottomNavigationBarItem(
               icon: Icon(Icons.calculate_outlined),

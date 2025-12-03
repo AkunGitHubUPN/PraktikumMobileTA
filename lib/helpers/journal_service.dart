@@ -14,9 +14,10 @@ class JournalService {
     double? latitude,
     double? longitude,
     String? namaLokasi,
+    String privacy = 'public', // NEW: Privacy setting (public/friends/private)
   }) async {
     try {
-      final userId = UserSession.instance.currentUserId; // ← FIX: Pakai UserSession
+      final userId = UserSession.instance.currentUserId;
       if (userId == null) throw Exception('User not logged in');
 
       final response = await _supabase.from('journals').insert({
@@ -27,9 +28,10 @@ class JournalService {
         'latitude': latitude,
         'longitude': longitude,
         'nama_lokasi': namaLokasi,
+        'privacy': privacy, // NEW: Add privacy field
       }).select().single();
 
-      print("[JOURNAL] ✅ Created: ${response['id']}");
+      print("[JOURNAL] ✅ Created: ${response['id']} (privacy: $privacy)");
       return response['id'];
     } catch (e) {
       print("[JOURNAL] ❌ Create error: $e");
@@ -55,6 +57,44 @@ class JournalService {
     }
   }
 
+  // NEW: Get PUBLIC journals of a specific user (for Friend Profile)
+  Future<List<Map<String, dynamic>>> getUserPublicJournals(String userId) async {
+    try {
+      final response = await _supabase
+          .from('journals')
+          .select('*, journal_photos(id, photo_url)')
+          .eq('user_id', userId)
+          .eq('privacy', 'public')
+          .order('created_at', ascending: false);
+
+      print("[JOURNAL] ✅ Loaded ${(response as List).length} public journals for user $userId");
+      return List<Map<String, dynamic>>.from(response);
+    } catch (e) {
+      print("[JOURNAL] ❌ Fetch public journals error: $e");
+      return [];
+    }
+  }
+
+  // NEW: Get journal count for a user (with privacy filter)
+  Future<int> getUserJournalCount(String userId, {bool publicOnly = false}) async {
+    try {
+      var query = _supabase
+          .from('journals')
+          .select()
+          .eq('user_id', userId);
+      
+      if (publicOnly) {
+        query = query.eq('privacy', 'public');
+      }
+
+      final response = await query;
+      return (response as List).length;
+    } catch (e) {
+      print("[JOURNAL] ❌ Count error: $e");
+      return 0;
+    }
+  }
+
   // Get Single Journal by ID
   Future<Map<String, dynamic>?> getJournalById(String journalId) async {
     try {
@@ -76,13 +116,21 @@ class JournalService {
     required String journalId,
     required String judul,
     required String cerita,
+    String? privacy, // NEW: Optional privacy update
   }) async {
     try {
-      await _supabase.from('journals').update({
+      final updateData = {
         'judul': judul,
         'cerita': cerita,
         'updated_at': DateTime.now().toIso8601String(),
-      }).eq('id', journalId);
+      };
+      
+      // Add privacy if provided
+      if (privacy != null) {
+        updateData['privacy'] = privacy;
+      }
+
+      await _supabase.from('journals').update(updateData).eq('id', journalId);
 
       print("[JOURNAL] ✅ Updated: $journalId");
       return true;
@@ -140,7 +188,6 @@ class JournalService {
       return false;
     }
   }
-
   // Get Photos for Journal
   Future<List<Map<String, dynamic>>> getPhotosForJournal(String journalId) async {
     try {
@@ -151,7 +198,7 @@ class JournalService {
 
       return List<Map<String, dynamic>>.from(response);
     } catch (e) {
-      print("[JOURNAL] ❌ Fetch photos error: $e");
+      print("[JOURNAL] ❌ Get photos error: $e");
       return [];
     }
   }

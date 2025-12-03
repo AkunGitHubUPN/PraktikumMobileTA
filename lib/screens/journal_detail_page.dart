@@ -26,6 +26,7 @@ class _JournalDetailPageState extends State<JournalDetailPage> {
   List<String> _photosToDelete = [];
   List<String> _newPhotoPaths = [];
   final ImagePicker _picker = ImagePicker();
+  String _selectedPrivacy = 'public'; // NEW: Privacy selector
 
   @override
   void initState() {
@@ -40,8 +41,7 @@ class _JournalDetailPageState extends State<JournalDetailPage> {
     _judulController.dispose();
     _ceritaController.dispose();
     super.dispose();
-  }
-  void _loadJournalData() async {
+  }  void _loadJournalData() async {
     final journalData = await _journalService.getJournalById(widget.journalId);
 
     setState(() {
@@ -50,16 +50,17 @@ class _JournalDetailPageState extends State<JournalDetailPage> {
           ?.cast<Map<String, dynamic>>() ?? [];
       _judulController.text = journalData?['judul'] ?? '';
       _ceritaController.text = journalData?['cerita'] ?? '';
+      _selectedPrivacy = journalData?['privacy'] ?? 'public'; // NEW: Load privacy
       _isLoading = false;
     });
-  }
-  Future<void> _saveChanges() async {
+  }  Future<void> _saveChanges() async {
     try {
-      // Update journal text only
+      // Update journal text and privacy
       final success = await _journalService.updateJournal(
         journalId: widget.journalId,
         judul: _judulController.text,
         cerita: _ceritaController.text,
+        privacy: _selectedPrivacy, // NEW: Update privacy
       );
 
       if (!success) {
@@ -586,38 +587,77 @@ class _JournalDetailPageState extends State<JournalDetailPage> {
                       color: const Color(0xFFFF6B4A),
                     ),
                   ),
-                  const SizedBox(height: 12),
-
-                  if (_isEditMode)
+                  const SizedBox(height: 12),                  if (_isEditMode)
                     Padding(
                       padding: const EdgeInsets.only(bottom: 30),
-                      child: TextField(
-                        controller: _ceritaController,
-                        maxLines: 8,
-                        decoration: InputDecoration(
-                          labelText: 'Cerita Perjalanan',
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                            borderSide: const BorderSide(
-                              color: Color(0xFFFF6B4A),
-                              width: 2,
+                      child: Column(
+                        children: [
+                          TextField(
+                            controller: _ceritaController,
+                            maxLines: 8,
+                            decoration: InputDecoration(
+                              labelText: 'Cerita Perjalanan',
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: const BorderSide(
+                                  color: Color(0xFFFF6B4A),
+                                  width: 2,
+                                ),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: const BorderSide(
+                                  color: Color(0xFFFF6B4A),
+                                  width: 2,
+                                ),
+                              ),
+                            ),
+                            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                              height: 1.8,
+                              color: Colors.black87,
                             ),
                           ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                            borderSide: const BorderSide(
-                              color: Color(0xFFFF6B4A),
-                              width: 2,
+                          const SizedBox(height: 16),
+                          // NEW: Privacy Selector
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            decoration: BoxDecoration(
+                              border: Border.all(color: const Color(0xFFFF6B4A), width: 2),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.lock_outline, color: Color(0xFFFF6B4A)),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: DropdownButton<String>(
+                                    value: _selectedPrivacy,
+                                    isExpanded: true,
+                                    underline: const SizedBox(),
+                                    items: const [
+                                      DropdownMenuItem(
+                                        value: 'public',
+                                        child: Text('Public - Teman dapat melihat'),
+                                      ),
+                                      DropdownMenuItem(
+                                        value: 'private',
+                                        child: Text('Private - Hanya saya'),
+                                      ),
+                                    ],
+                                    onChanged: (value) {
+                                      setState(() {
+                                        _selectedPrivacy = value!;
+                                      });
+                                    },
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                        ),
-                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          height: 1.8,
-                          color: Colors.black87,
-                        ),
+                        ],
                       ),
                     )
                   else
