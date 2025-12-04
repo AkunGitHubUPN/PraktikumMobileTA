@@ -52,6 +52,15 @@ class _FriendsPageState extends State<FriendsPage>
   Future<void> _loadFriends() async {
     setState(() => _isLoadingFriends = true);
     final friends = await _friendService.getFriends();
+    print('[FRIENDS] Loaded ${friends.length} friends');
+    for (var f in friends) {
+      final friend = f['friend'] as Map<String, dynamic>?;
+      if (friend != null) {
+        print(
+          '[FRIENDS] Friend: ${friend['username']}, photo_url: ${friend['photo_url']}',
+        );
+      }
+    }
     setState(() {
       _friends = friends;
       _isLoadingFriends = false;
@@ -87,6 +96,12 @@ class _FriendsPageState extends State<FriendsPage>
 
     setState(() => _isSearching = true);
     final results = await _friendService.searchUsers(query);
+    print('[SEARCH] Found ${results.length} users');
+    for (var user in results) {
+      print(
+        '[SEARCH] User: ${user['username']}, photo_url: ${user['photo_url']}, full_name: ${user['full_name']}',
+      );
+    }
     setState(() {
       _searchResults = results;
       _isSearching = false;
@@ -99,14 +114,20 @@ class _FriendsPageState extends State<FriendsPage>
 
     if (success) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Friend request sent to $username')),
+        SnackBar(
+          content: Text('Permintaan pertemanan dikirim ke $username'),
+          backgroundColor: const Color(0xFFFF6B4A),
+        ),
       );
       _searchController.clear();
       setState(() => _searchResults = []);
       _loadSentRequests();
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Failed to send friend request')),
+        const SnackBar(
+          content: Text('Gagal mengirim permintaan pertemanan'),
+          backgroundColor: Colors.red,
+        ),
       );
     }
   }
@@ -119,14 +140,20 @@ class _FriendsPageState extends State<FriendsPage>
     if (!mounted) return;
 
     if (success) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Friend request accepted')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Permintaan pertemanan diterima'),
+          backgroundColor: Color(0xFFFF6B4A),
+        ),
+      );
       _loadData();
     } else {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Failed to accept request')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Gagal menerima permintaan'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 
@@ -135,14 +162,20 @@ class _FriendsPageState extends State<FriendsPage>
     if (!mounted) return;
 
     if (success) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Friend request rejected')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Permintaan pertemanan ditolak'),
+          backgroundColor: Color(0xFFFF6B4A),
+        ),
+      );
       _loadPendingRequests();
     } else {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Failed to reject request')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Gagal menolak permintaan'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 
@@ -151,14 +184,20 @@ class _FriendsPageState extends State<FriendsPage>
     if (!mounted) return;
 
     if (success) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Friend request cancelled')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Permintaan pertemanan dibatalkan'),
+          backgroundColor: Color(0xFFFF6B4A),
+        ),
+      );
       _loadSentRequests();
     } else {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Failed to cancel request')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Gagal membatalkan permintaan'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 
@@ -166,16 +205,27 @@ class _FriendsPageState extends State<FriendsPage>
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Remove Friend'),
-        content: Text('Remove $friendName from your friends?'),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text(
+          'Hapus Teman',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        content: Text('Hapus $friendName dari daftar teman Anda?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
+            child: Text('Batal', style: TextStyle(color: Colors.grey[700])),
           ),
-          TextButton(
+          ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Remove', style: TextStyle(color: Colors.red)),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            child: const Text('Hapus'),
           ),
         ],
       ),
@@ -188,41 +238,85 @@ class _FriendsPageState extends State<FriendsPage>
 
     if (success) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('$friendName removed from friends')),
+        SnackBar(
+          content: Text('$friendName dihapus dari daftar teman'),
+          backgroundColor: const Color(0xFFFF6B4A),
+        ),
       );
       _loadFriends();
     } else {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Failed to remove friend')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Gagal menghapus teman'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Colors.grey[50],
       appBar: AppBar(
-        backgroundColor: const Color(0xFF6200EA),
+        backgroundColor: const Color(0xFFFF6B4A),
         elevation: 0,
         title: const Text(
-          'Friends',
+          'Teman',
           style: TextStyle(
-            fontSize: 20,
+            fontSize: 24,
             fontWeight: FontWeight.bold,
             color: Colors.white,
           ),
         ),
-        bottom: TabBar(
-          controller: _tabController,
-          indicatorColor: Colors.white,
-          labelColor: Colors.white,
-          unselectedLabelColor: Colors.white70,
-          tabs: [
-            Tab(text: 'Friends (${_friends.length})'),
-            Tab(text: 'Requests (${_pendingRequests.length})'),
-            Tab(text: 'Sent (${_sentRequests.length})'),
-          ],
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(48),
+          child: Container(
+            color: const Color(0xFFFF6B4A),
+            child: TabBar(
+              controller: _tabController,
+              indicatorColor: Colors.white,
+              indicatorWeight: 3,
+              labelColor: Colors.white,
+              unselectedLabelColor: Colors.white70,
+              labelStyle: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+              ),
+              tabs: [
+                Tab(
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.people, size: 18),
+                      const SizedBox(width: 6),
+                      Text('Teman (${_friends.length})'),
+                    ],
+                  ),
+                ),
+                Tab(
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.person_add, size: 18),
+                      const SizedBox(width: 6),
+                      Text('Masuk (${_pendingRequests.length})'),
+                    ],
+                  ),
+                ),
+                Tab(
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.send, size: 18),
+                      const SizedBox(width: 6),
+                      Text('Terkirim (${_sentRequests.length})'),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
       body: Column(
@@ -251,8 +345,8 @@ class _FriendsPageState extends State<FriendsPage>
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.shade200,
-            blurRadius: 4,
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 8,
             offset: const Offset(0, 2),
           ),
         ],
@@ -260,11 +354,12 @@ class _FriendsPageState extends State<FriendsPage>
       child: TextField(
         controller: _searchController,
         decoration: InputDecoration(
-          hintText: 'Search users by username...',
-          prefixIcon: const Icon(Icons.search, color: Color(0xFF6200EA)),
+          hintText: 'Cari teman dengan username...',
+          hintStyle: TextStyle(color: Colors.grey[400]),
+          prefixIcon: const Icon(Icons.search, color: Color(0xFFFF6B4A)),
           suffixIcon: _searchController.text.isNotEmpty
               ? IconButton(
-                  icon: const Icon(Icons.clear),
+                  icon: const Icon(Icons.clear, color: Colors.grey),
                   onPressed: () {
                     _searchController.clear();
                     setState(() => _searchResults = []);
@@ -272,10 +367,15 @@ class _FriendsPageState extends State<FriendsPage>
                 )
               : null,
           filled: true,
-          fillColor: Colors.grey.shade100,
+          fillColor: Colors.grey[100],
+          contentPadding: const EdgeInsets.symmetric(vertical: 16),
           border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(16),
             borderSide: BorderSide.none,
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(16),
+            borderSide: const BorderSide(color: Color(0xFFFF6B4A), width: 2),
           ),
         ),
         onChanged: _searchUsers,
@@ -285,41 +385,132 @@ class _FriendsPageState extends State<FriendsPage>
 
   Widget _buildSearchResults() {
     if (_isSearching) {
-      return const Padding(
-        padding: EdgeInsets.all(32),
-        child: Center(child: CircularProgressIndicator()),
+      return Padding(
+        padding: const EdgeInsets.all(32),
+        child: Center(
+          child: CircularProgressIndicator(color: const Color(0xFFFF6B4A)),
+        ),
       );
     }
 
     return Container(
-      constraints: const BoxConstraints(maxHeight: 300),
-      color: Colors.grey.shade50,
+      constraints: const BoxConstraints(maxHeight: 350),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
       child: ListView.builder(
         shrinkWrap: true,
+        padding: const EdgeInsets.symmetric(vertical: 8),
         itemCount: _searchResults.length,
         itemBuilder: (context, index) {
           final user = _searchResults[index];
           final photoUrl = user['photo_url'];
-          return ListTile(
-            leading: CircleAvatar(
-              backgroundColor: const Color(0xFF6200EA),
-              backgroundImage: photoUrl != null ? NetworkImage(photoUrl) : null,
-              child: photoUrl == null
-                  ? Text(
-                      user['username'][0].toUpperCase(),
-                      style: const TextStyle(color: Colors.white),
-                    )
-                  : null,
+          final hobby = user['hobby'];
+          return Container(
+            margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            decoration: BoxDecoration(
+              color: Colors.grey[50],
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.grey[200]!),
             ),
-            title: Text(user['username'] ?? 'Unknown'),
-            subtitle: Text(user['full_name'] ?? ''),
-            trailing: ElevatedButton(
-              onPressed: () => _sendFriendRequest(user['id'], user['username']),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF6200EA),
-                foregroundColor: Colors.white,
+            child: ListTile(
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 10,
               ),
-              child: const Text('Add'),
+              leading: Stack(
+                children: [
+                  CircleAvatar(
+                    radius: 30,
+                    backgroundColor: const Color(0xFFFF6B4A),
+                    foregroundImage:
+                        photoUrl != null && photoUrl.toString().isNotEmpty
+                        ? NetworkImage(photoUrl)
+                        : null,
+                    child: Text(
+                      user['username'][0].toUpperCase(),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  if (photoUrl != null && photoUrl.toString().isNotEmpty)
+                    Positioned(
+                      bottom: 0,
+                      right: 0,
+                      child: Container(
+                        padding: const EdgeInsets.all(3),
+                        decoration: BoxDecoration(
+                          color: Colors.green,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 2),
+                        ),
+                        child: const Icon(
+                          Icons.check,
+                          size: 10,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+              title: Text(
+                user['username'] ?? 'Unknown',
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                  color: Colors.black87,
+                ),
+              ),
+              subtitle: Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Row(
+                  children: [
+                    Icon(Icons.favorite, size: 14, color: Colors.red[400]),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Text(
+                        hobby != null && hobby.toString().isNotEmpty
+                            ? hobby.toString()
+                            : 'Belum ada hobi',
+                        style: TextStyle(color: Colors.grey[700], fontSize: 14),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              trailing: ElevatedButton.icon(
+                onPressed: () =>
+                    _sendFriendRequest(user['id'], user['username']),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFFF6B4A),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 10,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  elevation: 0,
+                ),
+                icon: const Icon(Icons.person_add, size: 18),
+                label: const Text(
+                  'Tambah',
+                  style: TextStyle(fontWeight: FontWeight.w600),
+                ),
+              ),
             ),
           );
         },
@@ -329,7 +520,9 @@ class _FriendsPageState extends State<FriendsPage>
 
   Widget _buildFriendsList() {
     if (_isLoadingFriends) {
-      return const Center(child: CircularProgressIndicator());
+      return const Center(
+        child: CircularProgressIndicator(color: Color(0xFFFF6B4A)),
+      );
     }
 
     if (_friends.isEmpty) {
@@ -337,16 +530,32 @@ class _FriendsPageState extends State<FriendsPage>
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.people_outline, size: 80, color: Colors.grey.shade400),
-            const SizedBox(height: 16),
-            Text(
-              'No friends yet',
-              style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFF6B4A).withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.people_outline,
+                size: 64,
+                color: Color(0xFFFF6B4A),
+              ),
+            ),
+            const SizedBox(height: 24),
+            const Text(
+              'Belum Ada Teman',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: Colors.black87,
+              ),
             ),
             const SizedBox(height: 8),
             Text(
-              'Search for users to add friends',
-              style: TextStyle(fontSize: 14, color: Colors.grey.shade500),
+              'Cari pengguna untuk menambah teman',
+              style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+              textAlign: TextAlign.center,
             ),
           ],
         ),
@@ -355,32 +564,100 @@ class _FriendsPageState extends State<FriendsPage>
 
     return RefreshIndicator(
       onRefresh: _loadFriends,
+      color: const Color(0xFFFF6B4A),
       child: ListView.builder(
+        padding: const EdgeInsets.all(12),
         itemCount: _friends.length,
         itemBuilder: (context, index) {
           final friendship = _friends[index];
           final friend = friendship['friend'] as Map<String, dynamic>;
           final photoUrl = friend['photo_url'];
-          return Card(
-            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          final hobby = friend['hobby'];
+          print(
+            '[FRIENDS_LIST] Rendering: ${friend['username']}, photo: $photoUrl, hobby: $hobby',
+          );
+          return Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
             child: ListTile(
-              leading: CircleAvatar(
-                backgroundColor: const Color(0xFF6200EA),
-                backgroundImage: photoUrl != null
-                    ? NetworkImage(photoUrl)
-                    : null,
-                child: photoUrl == null
-                    ? Text(
-                        friend['username'][0].toUpperCase(),
-                        style: const TextStyle(color: Colors.white),
-                      )
-                    : null,
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 12,
+              ),
+              leading: Stack(
+                children: [
+                  CircleAvatar(
+                    radius: 32,
+                    backgroundColor: const Color(0xFFFF6B4A),
+                    foregroundImage: photoUrl != null && photoUrl.isNotEmpty
+                        ? NetworkImage(photoUrl)
+                        : null,
+                    child: Text(
+                      friend['username'][0].toUpperCase(),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  if (photoUrl != null && photoUrl.isNotEmpty)
+                    Positioned(
+                      bottom: 0,
+                      right: 0,
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: Colors.green,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 2),
+                        ),
+                        child: const Icon(
+                          Icons.check,
+                          size: 10,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                ],
               ),
               title: Text(
                 friend['username'] ?? 'Unknown',
-                style: const TextStyle(fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 17,
+                  color: Colors.black87,
+                ),
               ),
-              subtitle: Text(friend['full_name'] ?? ''),
+              subtitle: Padding(
+                padding: const EdgeInsets.only(top: 6),
+                child: Row(
+                  children: [
+                    Icon(Icons.favorite, size: 14, color: Colors.red[400]),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Text(
+                        hobby != null && hobby.toString().isNotEmpty
+                            ? hobby.toString()
+                            : 'Belum ada hobi',
+                        style: TextStyle(color: Colors.grey[700], fontSize: 14),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
               onTap: () async {
                 // Navigate to friend's profile
                 final needsRefresh = await Navigator.push(
@@ -398,24 +675,41 @@ class _FriendsPageState extends State<FriendsPage>
                   _loadFriends();
                 }
               },
-              trailing: PopupMenuButton(
-                itemBuilder: (context) => [
-                  const PopupMenuItem(
-                    value: 'remove',
-                    child: Row(
-                      children: [
-                        Icon(Icons.person_remove, color: Colors.red),
-                        SizedBox(width: 8),
-                        Text('Remove Friend'),
-                      ],
-                    ),
+              trailing: Container(
+                decoration: BoxDecoration(
+                  color: Colors.grey[100],
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: PopupMenuButton(
+                  icon: const Icon(Icons.more_vert, color: Colors.grey),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                ],
-                onSelected: (value) {
-                  if (value == 'remove') {
-                    _removeFriend(friend['id'], friend['username']);
-                  }
-                },
+                  itemBuilder: (context) => [
+                    const PopupMenuItem(
+                      value: 'remove',
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.person_remove,
+                            color: Colors.red,
+                            size: 20,
+                          ),
+                          SizedBox(width: 12),
+                          Text(
+                            'Hapus Teman',
+                            style: TextStyle(color: Colors.red),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                  onSelected: (value) {
+                    if (value == 'remove') {
+                      _removeFriend(friend['id'], friend['username']);
+                    }
+                  },
+                ),
               ),
             ),
           );
@@ -426,7 +720,9 @@ class _FriendsPageState extends State<FriendsPage>
 
   Widget _buildPendingRequestsList() {
     if (_isLoadingRequests) {
-      return const Center(child: CircularProgressIndicator());
+      return const Center(
+        child: CircularProgressIndicator(color: Color(0xFFFF6B4A)),
+      );
     }
 
     if (_pendingRequests.isEmpty) {
@@ -434,11 +730,31 @@ class _FriendsPageState extends State<FriendsPage>
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.inbox_outlined, size: 80, color: Colors.grey.shade400),
-            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFF6B4A).withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.inbox_outlined,
+                size: 64,
+                color: Color(0xFFFF6B4A),
+              ),
+            ),
+            const SizedBox(height: 24),
+            const Text(
+              'Tidak Ada Permintaan',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: Colors.black87,
+              ),
+            ),
+            const SizedBox(height: 8),
             Text(
-              'No pending requests',
-              style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
+              'Belum ada permintaan pertemanan masuk',
+              style: TextStyle(fontSize: 14, color: Colors.grey[600]),
             ),
           ],
         ),
@@ -447,55 +763,123 @@ class _FriendsPageState extends State<FriendsPage>
 
     return RefreshIndicator(
       onRefresh: _loadPendingRequests,
+      color: const Color(0xFFFF6B4A),
       child: ListView.builder(
+        padding: const EdgeInsets.all(12),
         itemCount: _pendingRequests.length,
         itemBuilder: (context, index) {
           final request = _pendingRequests[index];
           final sender = request['sender'] as Map<String, dynamic>;
           final photoUrl = sender['photo_url'];
+          final hobby = sender['hobby'];
           final createdAt = DateTime.parse(request['created_at']);
 
-          return Card(
-            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          return Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: const Color(0xFFFF6B4A).withOpacity(0.3),
+                width: 2,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFFFF6B4A).withOpacity(0.1),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
             child: ListTile(
+              contentPadding: const EdgeInsets.all(12),
               leading: CircleAvatar(
-                backgroundColor: const Color(0xFF6200EA),
-                backgroundImage: photoUrl != null
+                radius: 30,
+                backgroundColor: const Color(0xFFFF6B4A),
+                foregroundImage: photoUrl != null && photoUrl.isNotEmpty
                     ? NetworkImage(photoUrl)
                     : null,
-                child: photoUrl == null
-                    ? Text(
-                        sender['username'][0].toUpperCase(),
-                        style: const TextStyle(color: Colors.white),
-                      )
-                    : null,
+                child: Text(
+                  sender['username'][0].toUpperCase(),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
               title: Text(
                 sender['username'] ?? 'Unknown',
-                style: const TextStyle(fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
               ),
               subtitle: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(sender['full_name'] ?? ''),
+                  Row(
+                    children: [
+                      Icon(Icons.favorite, size: 12, color: Colors.red[400]),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          hobby != null && hobby.toString().isNotEmpty
+                              ? hobby.toString()
+                              : 'Belum ada hobi',
+                          style: TextStyle(
+                            color: Colors.grey[600],
+                            fontSize: 13,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
                   const SizedBox(height: 4),
                   Text(
                     timeago.format(createdAt),
-                    style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: const Color(0xFFFF6B4A),
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                 ],
               ),
               trailing: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  IconButton(
-                    icon: const Icon(Icons.check, color: Colors.green),
-                    onPressed: () =>
-                        _acceptRequest(request['id'], sender['id']),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.green.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: IconButton(
+                      icon: const Icon(
+                        Icons.check,
+                        color: Colors.green,
+                        size: 24,
+                      ),
+                      onPressed: () =>
+                          _acceptRequest(request['id'], sender['id']),
+                    ),
                   ),
-                  IconButton(
-                    icon: const Icon(Icons.close, color: Colors.red),
-                    onPressed: () => _rejectRequest(request['id']),
+                  const SizedBox(width: 8),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.red.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: IconButton(
+                      icon: const Icon(
+                        Icons.close,
+                        color: Colors.red,
+                        size: 24,
+                      ),
+                      onPressed: () => _rejectRequest(request['id']),
+                    ),
                   ),
                 ],
               ),
@@ -508,7 +892,9 @@ class _FriendsPageState extends State<FriendsPage>
 
   Widget _buildSentRequestsList() {
     if (_isLoadingSent) {
-      return const Center(child: CircularProgressIndicator());
+      return const Center(
+        child: CircularProgressIndicator(color: Color(0xFFFF6B4A)),
+      );
     }
 
     if (_sentRequests.isEmpty) {
@@ -516,11 +902,32 @@ class _FriendsPageState extends State<FriendsPage>
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.send_outlined, size: 80, color: Colors.grey.shade400),
-            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFF6B4A).withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.send_outlined,
+                size: 64,
+                color: Color(0xFFFF6B4A),
+              ),
+            ),
+            const SizedBox(height: 24),
+            const Text(
+              'Tidak Ada Permintaan Terkirim',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: Colors.black87,
+              ),
+            ),
+            const SizedBox(height: 8),
             Text(
-              'No sent requests',
-              style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
+              'Belum ada permintaan pertemanan yang dikirim',
+              style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+              textAlign: TextAlign.center,
             ),
           ],
         ),
@@ -529,49 +936,125 @@ class _FriendsPageState extends State<FriendsPage>
 
     return RefreshIndicator(
       onRefresh: _loadSentRequests,
+      color: const Color(0xFFFF6B4A),
       child: ListView.builder(
+        padding: const EdgeInsets.all(12),
         itemCount: _sentRequests.length,
         itemBuilder: (context, index) {
           final request = _sentRequests[index];
           final receiver = request['receiver'] as Map<String, dynamic>;
           final photoUrl = receiver['photo_url'];
+          final hobby = receiver['hobby'];
           final createdAt = DateTime.parse(request['created_at']);
 
-          return Card(
-            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          return Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
             child: ListTile(
-              leading: CircleAvatar(
-                backgroundColor: Colors.grey.shade400,
-                backgroundImage: photoUrl != null
-                    ? NetworkImage(photoUrl)
-                    : null,
-                child: photoUrl == null
-                    ? Text(
-                        receiver['username'][0].toUpperCase(),
-                        style: const TextStyle(color: Colors.white),
-                      )
-                    : null,
+              contentPadding: const EdgeInsets.all(12),
+              leading: Stack(
+                children: [
+                  CircleAvatar(
+                    radius: 30,
+                    backgroundColor: Colors.grey[300],
+                    foregroundImage: photoUrl != null && photoUrl.isNotEmpty
+                        ? NetworkImage(photoUrl)
+                        : null,
+                    child: Text(
+                      receiver['username'][0].toUpperCase(),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    right: 0,
+                    bottom: 0,
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        color: Colors.orange,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 2),
+                      ),
+                      child: const Icon(
+                        Icons.access_time,
+                        size: 12,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ],
               ),
               title: Text(
                 receiver['username'] ?? 'Unknown',
-                style: const TextStyle(fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
               ),
               subtitle: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(receiver['full_name'] ?? ''),
+                  Row(
+                    children: [
+                      Icon(Icons.favorite, size: 12, color: Colors.red[400]),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          hobby != null && hobby.toString().isNotEmpty
+                              ? hobby.toString()
+                              : 'Belum ada hobi',
+                          style: TextStyle(
+                            color: Colors.grey[600],
+                            fontSize: 13,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
                   const SizedBox(height: 4),
                   Text(
-                    'Sent ${timeago.format(createdAt)}',
-                    style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                    'Dikirim ${timeago.format(createdAt)}',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.orange[700],
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                 ],
               ),
-              trailing: TextButton(
+              trailing: ElevatedButton(
                 onPressed: () => _cancelRequest(request['id']),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red.withOpacity(0.1),
+                  foregroundColor: Colors.red,
+                  elevation: 0,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 10,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
                 child: const Text(
-                  'Cancel',
-                  style: TextStyle(color: Colors.red),
+                  'Batal',
+                  style: TextStyle(fontWeight: FontWeight.w600),
                 ),
               ),
             ),

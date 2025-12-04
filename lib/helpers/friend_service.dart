@@ -28,10 +28,12 @@ class FriendService {
 
       final friendIds = (friendsResponse as List)
           .map((f) => f['friend_id'] as String)
-          .toList();      // Search users (exclude self and friends)
+          .toList();
+
+      // Search users (exclude self and friends)
       final response = await _supabase
           .from('users')
-          .select('id, username, created_at')
+          .select('id, username, created_at, photo_url, hobby, full_name')
           .ilike('username', '%$query%')
           .neq('id', currentUserId)
           .order('username', ascending: true);
@@ -100,13 +102,14 @@ class FriendService {
   Future<List<Map<String, dynamic>>> getPendingRequests() async {
     try {
       final currentUserId = UserSession.instance.currentUserId;
-      if (currentUserId == null) throw Exception('User not logged in');      final response = await _supabase
+      if (currentUserId == null) throw Exception('User not logged in');
+      final response = await _supabase
           .from('friend_requests')
           .select('''
             id,
             sender_id,
             created_at,
-            sender:users!friend_requests_sender_id_fkey(id, username)
+            sender:users!friend_requests_sender_id_fkey(id, username, photo_url, hobby, full_name)
           ''')
           .eq('receiver_id', currentUserId)
           .eq('status', 'pending')
@@ -123,13 +126,14 @@ class FriendService {
   Future<List<Map<String, dynamic>>> getSentRequests() async {
     try {
       final currentUserId = UserSession.instance.currentUserId;
-      if (currentUserId == null) throw Exception('User not logged in');      final response = await _supabase
+      if (currentUserId == null) throw Exception('User not logged in');
+      final response = await _supabase
           .from('friend_requests')
           .select('''
             id,
             receiver_id,
             created_at,
-            receiver:users!friend_requests_receiver_id_fkey(id, username)
+            receiver:users!friend_requests_receiver_id_fkey(id, username, photo_url, hobby, full_name)
           ''')
           .eq('sender_id', currentUserId)
           .eq('status', 'pending')
@@ -155,10 +159,10 @@ class FriendService {
           .eq('id', requestId);
 
       // Create bidirectional friendship using helper function
-      await _supabase.rpc('create_friendship', params: {
-        'user1': currentUserId,
-        'user2': senderId,
-      });
+      await _supabase.rpc(
+        'create_friendship',
+        params: {'user1': currentUserId, 'user2': senderId},
+      );
 
       return true;
     } catch (e) {
@@ -201,13 +205,14 @@ class FriendService {
   Future<List<Map<String, dynamic>>> getFriends() async {
     try {
       final currentUserId = UserSession.instance.currentUserId;
-      if (currentUserId == null) throw Exception('User not logged in');      final response = await _supabase
+      if (currentUserId == null) throw Exception('User not logged in');
+      final response = await _supabase
           .from('friends')
           .select('''
             id,
             friend_id,
             created_at,
-            friend:users!friends_friend_id_fkey(id, username)
+            friend:users!friends_friend_id_fkey(id, username, photo_url, hobby, full_name)
           ''')
           .eq('user_id', currentUserId)
           .order('created_at', ascending: false);
@@ -226,10 +231,10 @@ class FriendService {
       if (currentUserId == null) throw Exception('User not logged in');
 
       // Remove bidirectional friendship using helper function
-      await _supabase.rpc('remove_friendship', params: {
-        'user1': currentUserId,
-        'user2': friendId,
-      });
+      await _supabase.rpc(
+        'remove_friendship',
+        params: {'user1': currentUserId, 'user2': friendId},
+      );
 
       return true;
     } catch (e) {
@@ -254,6 +259,7 @@ class FriendService {
       return false;
     }
   }
+
   /// Get friend count
   Future<int> getFriendCount() async {
     try {

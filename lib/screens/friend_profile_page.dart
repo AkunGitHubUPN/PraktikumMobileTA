@@ -4,6 +4,8 @@ import '../helpers/friend_service.dart';
 import '../helpers/supabase_helper.dart';
 import 'journal_detail_page.dart';
 import 'package:intl/intl.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
 
 class FriendProfilePage extends StatefulWidget {
   final String userId;
@@ -22,12 +24,14 @@ class FriendProfilePage extends StatefulWidget {
 class _FriendProfilePageState extends State<FriendProfilePage> {
   final _journalService = JournalService.instance;
   final _friendService = FriendService();
+  final MapController _mapController = MapController();
 
   bool _isLoading = true;
   String? _photoUrl;
   String? _hobby;
   int _publicJournalCount = 0;
   List<Map<String, dynamic>> _publicJournals = [];
+  LatLng _mapCenter = const LatLng(-7.557484, 110.856972); // Default center
 
   @override
   void initState() {
@@ -64,6 +68,16 @@ class _FriendProfilePageState extends State<FriendProfilePage> {
         _publicJournals = journals;
         _publicJournalCount = journals.length;
         _isLoading = false;
+
+        // Set map center to first journal location if available
+        if (journals.isNotEmpty &&
+            journals[0]['latitude'] != null &&
+            journals[0]['longitude'] != null) {
+          _mapCenter = LatLng(
+            journals[0]['latitude'],
+            journals[0]['longitude'],
+          );
+        }
       });
 
       print('[FRIEND_PROFILE] ✅ Profile loaded successfully');
@@ -72,6 +86,81 @@ class _FriendProfilePageState extends State<FriendProfilePage> {
       print('[FRIEND_PROFILE] ❌ Stack trace: $stackTrace');
       setState(() => _isLoading = false);
     }
+  }
+
+  List<Marker> _buildMarkers() {
+    return _publicJournals
+        .where((journal) {
+          return journal['latitude'] != null && journal['longitude'] != null;
+        })
+        .map((journal) {
+          final photos =
+              (journal['journal_photos'] as List?)
+                  ?.cast<Map<String, dynamic>>() ??
+              [];
+          final photoCount = photos.length;
+
+          return Marker(
+            width: 80.0,
+            height: 80.0,
+            point: LatLng(journal['latitude'], journal['longitude']),
+            child: Transform.translate(
+              offset: const Offset(0, -20),
+              child: GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) =>
+                          JournalDetailPage(journalId: journal['id']),
+                    ),
+                  );
+                },
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    if (photoCount > 0)
+                      Positioned(
+                        bottom: 25,
+                        right: 15,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 3,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(4),
+                            boxShadow: const [
+                              BoxShadow(color: Colors.black26, blurRadius: 4),
+                            ],
+                            border: Border.all(
+                              color: const Color(0xFFFF6B4A),
+                              width: 1,
+                            ),
+                          ),
+                          child: Text(
+                            '$photoCount',
+                            style: const TextStyle(
+                              color: Color(0xFFFF6B4A),
+                              fontWeight: FontWeight.bold,
+                              fontSize: 11,
+                            ),
+                          ),
+                        ),
+                      ),
+                    const Icon(
+                      Icons.location_pin,
+                      color: Color(0xFFFF6B4A),
+                      size: 45,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        })
+        .toList();
   }
 
   Future<void> _unfriendUser() async {
@@ -211,6 +300,45 @@ class _FriendProfilePageState extends State<FriendProfilePage> {
                         ],
                       ),
                     ),
+
+                    // Map Section - Only show if there are public journals with location
+                    if (_publicJournals.any(
+                      (j) => j['latitude'] != null && j['longitude'] != null,
+                    ))
+                      Container(
+                        height: 250,
+                        margin: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.1),
+                              blurRadius: 4,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: FlutterMap(
+                            mapController: _mapController,
+                            options: MapOptions(
+                              initialCenter: _mapCenter,
+                              initialZoom: 12,
+                              minZoom: 5,
+                              maxZoom: 18,
+                            ),
+                            children: [
+                              TileLayer(
+                                urlTemplate:
+                                    'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                                userAgentPackageName: 'com.example.jejak_pena',
+                              ),
+                              MarkerLayer(markers: _buildMarkers()),
+                            ],
+                          ),
+                        ),
+                      ),
 
                     const SizedBox(height: 16),
 
