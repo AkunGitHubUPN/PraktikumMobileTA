@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../helpers/security_helper.dart';
-import '../helpers/database_helper.dart';
+import '../helpers/auth_service.dart';
 import '../helpers/user_session.dart';
 import 'home_page.dart';
 
@@ -175,18 +175,17 @@ class _LockScreenPageState extends State<LockScreenPage> {
                 child: const Text('Batal', style: TextStyle(color: Colors.grey)),
               ),
               ElevatedButton(
-                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFFF6B4A), foregroundColor: Colors.white),
-                onPressed: isVerifying ? null : () async {
+                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFFF6B4A), foregroundColor: Colors.white),                onPressed: isVerifying ? null : () async {
                   setStateDialog(() => isVerifying = true);
                   
-                  final user = await DatabaseHelper.instance.loginUser(
+                  final user = await AuthService.instance.loginUser(
                     usernameController.text.trim(),
                     passwordController.text,
                   );
 
                   final currentUserId = UserSession.instance.currentUserId;
                   
-                  if (user != null && user[DatabaseHelper.columnUserId] == currentUserId) {
+                  if (user != null && user['id'] == currentUserId) {
                     await _securityHelper.setLockEnabled(false);
                     
                     if (mounted) {

@@ -5,18 +5,17 @@ import 'user_session.dart';
 class SecurityHelper {
   SecurityHelper._privateConstructor();
   static final SecurityHelper instance = SecurityHelper._privateConstructor();
-
   final _storage = const FlutterSecureStorage();
 
-  String _getPinKey(int userId) => 'pin_user_$userId';
-  String _getLockEnabledKey(int userId) => 'lock_enabled_user_$userId';
+  String _getPinKey(String userId) => 'pin_user_$userId';
+  String _getLockEnabledKey(String userId) => 'lock_enabled_user_$userId';
 
-  int _getCurrentUserId() {
+  String _getCurrentUserId() {
     final userId = UserSession.instance.currentUserId;
     if (userId == null) {
       throw Exception("Tidak ada user yang aktif saat mencoba akses keamanan.");
     }
-    return int.parse(userId);
+    return userId;
   }
 
   Future<void> setPin(String pin) async {
