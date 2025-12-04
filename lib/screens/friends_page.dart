@@ -258,6 +258,7 @@ class _FriendsPageState extends State<FriendsPage>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey[50],
+      resizeToAvoidBottomInset: false,
       appBar: AppBar(
         backgroundColor: const Color(0xFFFF6B4A),
         elevation: 0,

@@ -18,7 +18,13 @@ class FriendService {
   Future<List<Map<String, dynamic>>> searchUsers(String query) async {
     try {
       final currentUserId = UserSession.instance.currentUserId;
-      if (currentUserId == null) throw Exception('User not logged in');
+      if (currentUserId == null) {
+        print('[FRIEND_SERVICE] User not logged in');
+        throw Exception('User not logged in');
+      }
+
+      print('[FRIEND_SERVICE] Searching for: $query');
+      print('[FRIEND_SERVICE] Current user ID: $currentUserId');
 
       // Get current friends IDs
       final friendsResponse = await _supabase
@@ -30,22 +36,55 @@ class FriendService {
           .map((f) => f['friend_id'] as String)
           .toList();
 
+      print('[FRIEND_SERVICE] Existing friend IDs: $friendIds');
+
+      // Get pending/sent request IDs
+      final pendingRequests = await _supabase
+          .from('friend_requests')
+          .select('sender_id, receiver_id')
+          .or('sender_id.eq.$currentUserId,receiver_id.eq.$currentUserId')
+          .eq('status', 'pending');
+
+      final requestUserIds = <String>{};
+      for (var req in pendingRequests as List) {
+        if (req['sender_id'] == currentUserId) {
+          requestUserIds.add(req['receiver_id'] as String);
+        } else {
+          requestUserIds.add(req['sender_id'] as String);
+        }
+      }
+
+      print('[FRIEND_SERVICE] Pending request user IDs: $requestUserIds');
+
       // Search users (exclude self and friends)
       final response = await _supabase
           .from('users')
-          .select('id, username, created_at, photo_url, hobby, full_name')
+          .select('id, username, created_at, photo_url, hobby')
           .ilike('username', '%$query%')
           .neq('id', currentUserId)
           .order('username', ascending: true);
 
-      // Filter out existing friends
+      print(
+        '[FRIEND_SERVICE] Search results from DB: ${(response as List).length} users',
+      );
+
+      // Filter out existing friends and pending requests
       final users = (response as List)
-          .where((user) => !friendIds.contains(user['id']))
+          .where(
+            (user) =>
+                !friendIds.contains(user['id']) &&
+                !requestUserIds.contains(user['id']),
+          )
           .toList();
+
+      print('[FRIEND_SERVICE] After filtering: ${users.length} users');
+      for (var user in users) {
+        print('[FRIEND_SERVICE] - ${user['username']} (${user['id']})');
+      }
 
       return users.cast<Map<String, dynamic>>();
     } catch (e) {
-      print('Error searching users: $e');
+      print('[FRIEND_SERVICE] Error searching users: $e');
       return [];
     }
   }
@@ -109,7 +148,7 @@ class FriendService {
             id,
             sender_id,
             created_at,
-            sender:users!friend_requests_sender_id_fkey(id, username, photo_url, hobby, full_name)
+            sender:users!friend_requests_sender_id_fkey(id, username, photo_url, hobby)
           ''')
           .eq('receiver_id', currentUserId)
           .eq('status', 'pending')
@@ -133,7 +172,7 @@ class FriendService {
             id,
             receiver_id,
             created_at,
-            receiver:users!friend_requests_receiver_id_fkey(id, username, photo_url, hobby, full_name)
+            receiver:users!friend_requests_receiver_id_fkey(id, username, photo_url, hobby)
           ''')
           .eq('sender_id', currentUserId)
           .eq('status', 'pending')
@@ -212,7 +251,7 @@ class FriendService {
             id,
             friend_id,
             created_at,
-            friend:users!friends_friend_id_fkey(id, username, photo_url, hobby, full_name)
+            friend:users!friends_friend_id_fkey(id, username, photo_url, hobby)
           ''')
           .eq('user_id', currentUserId)
           .order('created_at', ascending: false);
