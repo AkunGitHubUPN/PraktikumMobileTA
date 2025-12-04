@@ -112,19 +112,21 @@ class _FriendsPageState extends State<FriendsPage>
   }
 
   Future<void> _acceptRequest(String requestId, String senderId) async {
-    final success =
-        await _friendService.acceptFriendRequest(requestId, senderId);
+    final success = await _friendService.acceptFriendRequest(
+      requestId,
+      senderId,
+    );
     if (!mounted) return;
 
     if (success) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Friend request accepted')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Friend request accepted')));
       _loadData();
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Failed to accept request')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Failed to accept request')));
     }
   }
 
@@ -133,14 +135,14 @@ class _FriendsPageState extends State<FriendsPage>
     if (!mounted) return;
 
     if (success) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Friend request rejected')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Friend request rejected')));
       _loadPendingRequests();
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Failed to reject request')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Failed to reject request')));
     }
   }
 
@@ -149,14 +151,14 @@ class _FriendsPageState extends State<FriendsPage>
     if (!mounted) return;
 
     if (success) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Friend request cancelled')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Friend request cancelled')));
       _loadSentRequests();
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Failed to cancel request')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Failed to cancel request')));
     }
   }
 
@@ -190,9 +192,9 @@ class _FriendsPageState extends State<FriendsPage>
       );
       _loadFriends();
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Failed to remove friend')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Failed to remove friend')));
     }
   }
 
@@ -217,15 +219,9 @@ class _FriendsPageState extends State<FriendsPage>
           labelColor: Colors.white,
           unselectedLabelColor: Colors.white70,
           tabs: [
-            Tab(
-              text: 'Friends (${_friends.length})',
-            ),
-            Tab(
-              text: 'Requests (${_pendingRequests.length})',
-            ),
-            Tab(
-              text: 'Sent (${_sentRequests.length})',
-            ),
+            Tab(text: 'Friends (${_friends.length})'),
+            Tab(text: 'Requests (${_pendingRequests.length})'),
+            Tab(text: 'Sent (${_sentRequests.length})'),
           ],
         ),
       ),
@@ -303,21 +299,22 @@ class _FriendsPageState extends State<FriendsPage>
         itemCount: _searchResults.length,
         itemBuilder: (context, index) {
           final user = _searchResults[index];
+          final photoUrl = user['photo_url'];
           return ListTile(
             leading: CircleAvatar(
               backgroundColor: const Color(0xFF6200EA),
-              child: Text(
-                user['username'][0].toUpperCase(),
-                style: const TextStyle(color: Colors.white),
-              ),
+              backgroundImage: photoUrl != null ? NetworkImage(photoUrl) : null,
+              child: photoUrl == null
+                  ? Text(
+                      user['username'][0].toUpperCase(),
+                      style: const TextStyle(color: Colors.white),
+                    )
+                  : null,
             ),
             title: Text(user['username'] ?? 'Unknown'),
             subtitle: Text(user['full_name'] ?? ''),
             trailing: ElevatedButton(
-              onPressed: () => _sendFriendRequest(
-                user['id'],
-                user['username'],
-              ),
+              onPressed: () => _sendFriendRequest(user['id'], user['username']),
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF6200EA),
                 foregroundColor: Colors.white,
@@ -362,15 +359,22 @@ class _FriendsPageState extends State<FriendsPage>
         itemCount: _friends.length,
         itemBuilder: (context, index) {
           final friendship = _friends[index];
-          final friend = friendship['friend'] as Map<String, dynamic>;          return Card(
+          final friend = friendship['friend'] as Map<String, dynamic>;
+          final photoUrl = friend['photo_url'];
+          return Card(
             margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: ListTile(
               leading: CircleAvatar(
                 backgroundColor: const Color(0xFF6200EA),
-                child: Text(
-                  friend['username'][0].toUpperCase(),
-                  style: const TextStyle(color: Colors.white),
-                ),
+                backgroundImage: photoUrl != null
+                    ? NetworkImage(photoUrl)
+                    : null,
+                child: photoUrl == null
+                    ? Text(
+                        friend['username'][0].toUpperCase(),
+                        style: const TextStyle(color: Colors.white),
+                      )
+                    : null,
               ),
               title: Text(
                 friend['username'] ?? 'Unknown',
@@ -388,7 +392,7 @@ class _FriendsPageState extends State<FriendsPage>
                     ),
                   ),
                 );
-                
+
                 // Refresh friends list if friend was removed
                 if (needsRefresh == true) {
                   _loadFriends();
@@ -448,6 +452,7 @@ class _FriendsPageState extends State<FriendsPage>
         itemBuilder: (context, index) {
           final request = _pendingRequests[index];
           final sender = request['sender'] as Map<String, dynamic>;
+          final photoUrl = sender['photo_url'];
           final createdAt = DateTime.parse(request['created_at']);
 
           return Card(
@@ -455,10 +460,15 @@ class _FriendsPageState extends State<FriendsPage>
             child: ListTile(
               leading: CircleAvatar(
                 backgroundColor: const Color(0xFF6200EA),
-                child: Text(
-                  sender['username'][0].toUpperCase(),
-                  style: const TextStyle(color: Colors.white),
-                ),
+                backgroundImage: photoUrl != null
+                    ? NetworkImage(photoUrl)
+                    : null,
+                child: photoUrl == null
+                    ? Text(
+                        sender['username'][0].toUpperCase(),
+                        style: const TextStyle(color: Colors.white),
+                      )
+                    : null,
               ),
               title: Text(
                 sender['username'] ?? 'Unknown',
@@ -524,6 +534,7 @@ class _FriendsPageState extends State<FriendsPage>
         itemBuilder: (context, index) {
           final request = _sentRequests[index];
           final receiver = request['receiver'] as Map<String, dynamic>;
+          final photoUrl = receiver['photo_url'];
           final createdAt = DateTime.parse(request['created_at']);
 
           return Card(
@@ -531,10 +542,15 @@ class _FriendsPageState extends State<FriendsPage>
             child: ListTile(
               leading: CircleAvatar(
                 backgroundColor: Colors.grey.shade400,
-                child: Text(
-                  receiver['username'][0].toUpperCase(),
-                  style: const TextStyle(color: Colors.white),
-                ),
+                backgroundImage: photoUrl != null
+                    ? NetworkImage(photoUrl)
+                    : null,
+                child: photoUrl == null
+                    ? Text(
+                        receiver['username'][0].toUpperCase(),
+                        style: const TextStyle(color: Colors.white),
+                      )
+                    : null,
               ),
               title: Text(
                 receiver['username'] ?? 'Unknown',

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../helpers/journal_service.dart';
 import '../helpers/friend_service.dart';
+import '../helpers/supabase_helper.dart';
 import 'journal_detail_page.dart';
 import 'package:intl/intl.dart';
 
@@ -21,8 +22,10 @@ class FriendProfilePage extends StatefulWidget {
 class _FriendProfilePageState extends State<FriendProfilePage> {
   final _journalService = JournalService.instance;
   final _friendService = FriendService();
-  
+
   bool _isLoading = true;
+  String? _photoUrl;
+  String? _hobby;
   int _publicJournalCount = 0;
   List<Map<String, dynamic>> _publicJournals = [];
 
@@ -34,18 +37,39 @@ class _FriendProfilePageState extends State<FriendProfilePage> {
 
   Future<void> _loadFriendProfile() async {
     setState(() => _isLoading = true);
-    
+
     try {
+      print('[FRIEND_PROFILE] Loading profile for userId: ${widget.userId}');
+
+      // Get user data
+      final supabase = SupabaseHelper.client;
+      print('[FRIEND_PROFILE] Fetching user data...');
+      final userData = await supabase
+          .from('users')
+          .select('photo_url, hobby')
+          .eq('id', widget.userId)
+          .single();
+      print('[FRIEND_PROFILE] User data: $userData');
+
       // Load only public journals
-      final journals = await _journalService.getUserPublicJournals(widget.userId);
-      
+      print('[FRIEND_PROFILE] Fetching public journals...');
+      final journals = await _journalService.getUserPublicJournals(
+        widget.userId,
+      );
+      print('[FRIEND_PROFILE] Public journals loaded: ${journals.length}');
+
       setState(() {
+        _photoUrl = userData['photo_url'];
+        _hobby = userData['hobby'];
         _publicJournals = journals;
         _publicJournalCount = journals.length;
         _isLoading = false;
       });
-    } catch (e) {
-      print('[FRIEND_PROFILE] Error loading data: $e');
+
+      print('[FRIEND_PROFILE] ✅ Profile loaded successfully');
+    } catch (e, stackTrace) {
+      print('[FRIEND_PROFILE] ❌ Error loading data: $e');
+      print('[FRIEND_PROFILE] ❌ Stack trace: $stackTrace');
       setState(() => _isLoading = false);
     }
   }
@@ -63,10 +87,7 @@ class _FriendProfilePageState extends State<FriendProfilePage> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text(
-              'Hapus',
-              style: TextStyle(color: Colors.red),
-            ),
+            child: const Text('Hapus', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -75,18 +96,21 @@ class _FriendProfilePageState extends State<FriendProfilePage> {
     if (confirm != true) return;
 
     final success = await _friendService.removeFriend(widget.userId);
-    
+
     if (!mounted) return;
 
     if (success) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('${widget.username} dihapus dari teman')),
       );
-      Navigator.pop(context, true); // Return to friends list with refresh signal
+      Navigator.pop(
+        context,
+        true,
+      ); // Return to friends list with refresh signal
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Gagal menghapus teman')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Gagal menghapus teman')));
     }
   }
 
@@ -119,19 +143,22 @@ class _FriendProfilePageState extends State<FriendProfilePage> {
                     Container(
                       width: double.infinity,
                       padding: const EdgeInsets.all(24),
-                      decoration: const BoxDecoration(
-                        color: Color(0xFFFF6B4A),
-                      ),
+                      decoration: const BoxDecoration(color: Color(0xFFFF6B4A)),
                       child: Column(
                         children: [
-                          const CircleAvatar(
+                          CircleAvatar(
                             radius: 50,
                             backgroundColor: Colors.white,
-                            child: Icon(
-                              Icons.person,
-                              size: 50,
-                              color: Color(0xFFFF6B4A),
-                            ),
+                            backgroundImage: _photoUrl != null
+                                ? NetworkImage(_photoUrl!)
+                                : null,
+                            child: _photoUrl == null
+                                ? const Icon(
+                                    Icons.person,
+                                    size: 50,
+                                    color: Color(0xFFFF6B4A),
+                                  )
+                                : null,
                           ),
                           const SizedBox(height: 16),
                           Text(
@@ -142,6 +169,40 @@ class _FriendProfilePageState extends State<FriendProfilePage> {
                               color: Colors.white,
                             ),
                           ),
+                          if (_hobby != null && _hobby!.isNotEmpty) ...[
+                            const SizedBox(height: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 8,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.2),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(
+                                    Icons.favorite,
+                                    size: 16,
+                                    color: Colors.white,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Flexible(
+                                    child: Text(
+                                      _hobby!,
+                                      style: const TextStyle(
+                                        fontSize: 14,
+                                        color: Colors.white,
+                                      ),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                           const SizedBox(height: 20),
                           _buildStatItem(
                             'Jurnal Publik',
@@ -150,9 +211,9 @@ class _FriendProfilePageState extends State<FriendProfilePage> {
                         ],
                       ),
                     ),
-                    
+
                     const SizedBox(height: 16),
-                    
+
                     // Public Journals Section
                     Padding(
                       padding: const EdgeInsets.all(16),
@@ -176,7 +237,9 @@ class _FriendProfilePageState extends State<FriendProfilePage> {
                                   vertical: 6,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFFFF6B4A).withOpacity(0.1),
+                                  color: const Color(
+                                    0xFFFF6B4A,
+                                  ).withOpacity(0.1),
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                                 child: Row(
@@ -201,7 +264,7 @@ class _FriendProfilePageState extends State<FriendProfilePage> {
                             ],
                           ),
                           const SizedBox(height: 16),
-                          
+
                           if (_publicJournals.isEmpty)
                             Center(
                               child: Padding(
@@ -240,7 +303,9 @@ class _FriendProfilePageState extends State<FriendProfilePage> {
                               physics: const NeverScrollableScrollPhysics(),
                               itemCount: _publicJournals.length,
                               itemBuilder: (context, index) {
-                                return _buildJournalCard(_publicJournals[index]);
+                                return _buildJournalCard(
+                                  _publicJournals[index],
+                                );
                               },
                             ),
                         ],
@@ -267,37 +332,32 @@ class _FriendProfilePageState extends State<FriendProfilePage> {
         const SizedBox(height: 4),
         Text(
           label,
-          style: TextStyle(
-            fontSize: 14,
-            color: Colors.white.withOpacity(0.9),
-          ),
+          style: TextStyle(fontSize: 14, color: Colors.white.withOpacity(0.9)),
         ),
       ],
     );
   }
 
   Widget _buildJournalCard(Map<String, dynamic> journal) {
-    final photos = (journal['journal_photos'] as List?)?.cast<Map<String, dynamic>>() ?? [];
+    final photos =
+        (journal['journal_photos'] as List?)?.cast<Map<String, dynamic>>() ??
+        [];
     final firstPhotoUrl = photos.isNotEmpty ? photos[0]['photo_url'] : null;
-    
+
     final tanggal = journal['tanggal'] != null
         ? DateTime.parse(journal['tanggal'])
         : null;
-    
+
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: InkWell(
         onTap: () {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => JournalDetailPage(
-                journalId: journal['id'],
-              ),
+              builder: (context) => JournalDetailPage(journalId: journal['id']),
             ),
           );
         },
@@ -340,9 +400,9 @@ class _FriendProfilePageState extends State<FriendProfilePage> {
                     size: 40,
                   ),
                 ),
-              
+
               const SizedBox(width: 12),
-              
+
               // Content
               Expanded(
                 child: Column(
@@ -372,24 +432,19 @@ class _FriendProfilePageState extends State<FriendProfilePage> {
                     if (tanggal != null)
                       Text(
                         DateFormat('d MMMM yyyy').format(tanggal),
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey[600],
-                        ),
+                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                       ),
                     const SizedBox(height: 4),
                     Text(
                       journal['cerita'] ?? '',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey[700],
-                      ),
+                      style: TextStyle(fontSize: 14, color: Colors.grey[700]),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
                     if (journal['nama_lokasi'] != null) ...[
                       const SizedBox(height: 4),
                       Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Icon(
                             Icons.location_on,
@@ -404,8 +459,8 @@ class _FriendProfilePageState extends State<FriendProfilePage> {
                                 fontSize: 12,
                                 color: Colors.grey[500],
                               ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
+                              maxLines: 2,
+                              softWrap: true,
                             ),
                           ),
                         ],

@@ -24,7 +24,7 @@ class _AddJournalPageState extends State<AddJournalPage> {
   final _ceritaController = TextEditingController();
   final _journalService = JournalService.instance;
   final _supabaseHelper = SupabaseHelper.instance;
-  
+
   Position? _currentPosition;
   bool _isLoadingLocation = false;
   String _addressString = "Mendeteksi lokasi...";
@@ -32,7 +32,7 @@ class _AddJournalPageState extends State<AddJournalPage> {
 
   final ImagePicker _picker = ImagePicker();
   List<String> _imagePaths = [];
-  
+
   DateTime _selectedDate = DateTime.now();
   String _selectedPrivacy = 'public'; // NEW: Privacy selector
 
@@ -118,9 +118,8 @@ class _AddJournalPageState extends State<AddJournalPage> {
     final result = await Navigator.push<Map<String, dynamic>>(
       context,
       MaterialPageRoute(
-        builder: (context) => LocationPickerPage(
-          initialPosition: _currentPosition,
-        ),
+        builder: (context) =>
+            LocationPickerPage(initialPosition: _currentPosition),
       ),
     );
 
@@ -162,6 +161,7 @@ class _AddJournalPageState extends State<AddJournalPage> {
       });
     }
   }
+
   void _saveJournal() async {
     String judul = _judulController.text;
     String cerita = _ceritaController.text;
@@ -178,8 +178,10 @@ class _AddJournalPageState extends State<AddJournalPage> {
 
     final userId = UserSession.instance.currentUserId;
     if (userId == null) {
-       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Error sesi login. Silakan login ulang.')));
-       return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Error sesi login. Silakan login ulang.')),
+      );
+      return;
     }
 
     // Show loading
@@ -187,7 +189,8 @@ class _AddJournalPageState extends State<AddJournalPage> {
       context: context,
       barrierDismissible: false,
       builder: (context) => const Center(child: CircularProgressIndicator()),
-    );    try {
+    );
+    try {
       // Create journal
       final journalId = await _journalService.createJournal(
         judul: judul,
@@ -201,22 +204,28 @@ class _AddJournalPageState extends State<AddJournalPage> {
 
       if (journalId == null) {
         throw Exception('Failed to create journal');
-      }// Upload photos
+      } // Upload photos
       for (int i = 0; i < _imagePaths.length; i++) {
         String localPath = _imagePaths[i];
-        print("[ADD_JOURNAL] 📸 Uploading photo ${i + 1}/${_imagePaths.length}: $localPath");
-        
+        print(
+          "[ADD_JOURNAL] 📸 Uploading photo ${i + 1}/${_imagePaths.length}: $localPath",
+        );
+
         try {
-          final fileName = 'photo_${DateTime.now().millisecondsSinceEpoch}_$i.jpg';
-          final photoUrl = await _supabaseHelper.uploadPhoto(localPath, fileName);
-          
+          final fileName =
+              'photo_${DateTime.now().millisecondsSinceEpoch}_$i.jpg';
+          final photoUrl = await _supabaseHelper.uploadPhoto(
+            localPath,
+            fileName,
+          );
+
           print("[ADD_JOURNAL] ✅ Photo uploaded: $photoUrl");
-          
+
           await _journalService.addPhotoToJournal(
             journalId: journalId,
             photoUrl: photoUrl,
           );
-          
+
           print("[ADD_JOURNAL] ✅ Photo linked to journal");
         } catch (photoError) {
           print("[ADD_JOURNAL] ❌ Photo upload failed: $photoError");
@@ -229,16 +238,22 @@ class _AddJournalPageState extends State<AddJournalPage> {
 
       final milestoneHelper = MilestoneHelper();
       final activeMilestones = await milestoneHelper.checkAllMilestones();
-      
+
       for (var milestone in activeMilestones) {
         final type = milestone['type'] as String;
         final milestoneNumber = milestone['milestone'] as int;
-        
-        final title = milestoneHelper.generateMilestoneText(type, milestoneNumber);
-        final subtitle = milestoneHelper.generateMilestoneSubtitle(type, milestoneNumber);
-        
+
+        final title = milestoneHelper.generateMilestoneText(
+          type,
+          milestoneNumber,
+        );
+        final subtitle = milestoneHelper.generateMilestoneSubtitle(
+          type,
+          milestoneNumber,
+        );
+
         await Future.delayed(const Duration(milliseconds: 500));
-        
+
         await _notificationHelper.showMilestoneNotification(
           id: DateTime.now().millisecondsSinceEpoch.toInt() % 100000,
           title: title,
@@ -254,10 +269,7 @@ class _AddJournalPageState extends State<AddJournalPage> {
       if (mounted) {
         Navigator.pop(context); // Close loading
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: $e'),
-            backgroundColor: Colors.red,
-          ),
+          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
         );
       }
     }
@@ -277,13 +289,13 @@ class _AddJournalPageState extends State<AddJournalPage> {
       appBar: AppBar(
         backgroundColor: const Color(0xFFFF6B4A),
         foregroundColor: Colors.white,
-        title: const Text('Jurnal Baru', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text(
+          'Jurnal Baru',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
         elevation: 0,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.check),
-            onPressed: _saveJournal,
-          ),
+          IconButton(icon: const Icon(Icons.check), onPressed: _saveJournal),
         ],
       ),
       body: SingleChildScrollView(
@@ -295,7 +307,9 @@ class _AddJournalPageState extends State<AddJournalPage> {
               decoration: BoxDecoration(
                 color: const Color(0xFFFF6B4A).withOpacity(0.1),
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: const Color(0xFFFF6B4A).withOpacity(0.3)),
+                border: Border.all(
+                  color: const Color(0xFFFF6B4A).withOpacity(0.3),
+                ),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -340,11 +354,11 @@ class _AddJournalPageState extends State<AddJournalPage> {
                           icon: const Icon(Icons.my_location, size: 18),
                           label: const Text("Auto Lokasi"),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: _useAutoLocation 
-                                ? const Color(0xFFFF6B4A) 
+                            backgroundColor: _useAutoLocation
+                                ? const Color(0xFFFF6B4A)
                                 : Colors.grey[300],
-                            foregroundColor: _useAutoLocation 
-                                ? Colors.white 
+                            foregroundColor: _useAutoLocation
+                                ? Colors.white
                                 : Colors.grey[700],
                             elevation: 0,
                             padding: const EdgeInsets.symmetric(vertical: 12),
@@ -361,11 +375,11 @@ class _AddJournalPageState extends State<AddJournalPage> {
                           icon: const Icon(Icons.map, size: 18),
                           label: const Text("Pilih di Peta"),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: !_useAutoLocation 
-                                ? const Color(0xFFFF6B4A) 
+                            backgroundColor: !_useAutoLocation
+                                ? const Color(0xFFFF6B4A)
                                 : Colors.white,
-                            foregroundColor: !_useAutoLocation 
-                                ? Colors.white 
+                            foregroundColor: !_useAutoLocation
+                                ? Colors.white
                                 : const Color(0xFFFF6B4A),
                             elevation: 0,
                             padding: const EdgeInsets.symmetric(vertical: 12),
@@ -396,7 +410,10 @@ class _AddJournalPageState extends State<AddJournalPage> {
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: Color(0xFFFF6B4A), width: 2),
+                        borderSide: const BorderSide(
+                          color: Color(0xFFFF6B4A),
+                          width: 2,
+                        ),
                       ),
                     ),
                     textCapitalization: TextCapitalization.sentences,
@@ -412,7 +429,10 @@ class _AddJournalPageState extends State<AddJournalPage> {
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: Color(0xFFFF6B4A), width: 2),
+                        borderSide: const BorderSide(
+                          color: Color(0xFFFF6B4A),
+                          width: 2,
+                        ),
                       ),
                     ),
                     maxLines: 10,
@@ -435,30 +455,48 @@ class _AddJournalPageState extends State<AddJournalPage> {
                             children: [
                               Text(
                                 'Tanggal Jurnal',
-                                style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey[600],
+                                ),
                               ),
                               const SizedBox(height: 4),
                               Text(
                                 DateFormat('d MMMM yyyy').format(_selectedDate),
-                                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w500,
+                                ),
                               ),
                             ],
                           ),
-                          const Icon(Icons.calendar_today, color: Color(0xFFFF6B4A)),
+                          const Icon(
+                            Icons.calendar_today,
+                            color: Color(0xFFFF6B4A),
+                          ),
                         ],
                       ),
-                    ),                  ),
+                    ),
+                  ),
                   const SizedBox(height: 16),
                   // NEW: Privacy Selector
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
                     decoration: BoxDecoration(
                       border: Border.all(color: Colors.grey[400]!),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Row(
                       children: [
-                        const Icon(Icons.lock_outline, color: Color(0xFFFF6B4A)),
+                        Icon(
+                          _selectedPrivacy == 'public'
+                              ? Icons.public
+                              : Icons.lock_outline,
+                          color: Color(0xFFFF6B4A),
+                        ),
                         const SizedBox(width: 12),
                         Expanded(
                           child: Column(
@@ -466,7 +504,10 @@ class _AddJournalPageState extends State<AddJournalPage> {
                             children: [
                               Text(
                                 'Privasi Jurnal',
-                                style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey[600],
+                                ),
                               ),
                               DropdownButton<String>(
                                 value: _selectedPrivacy,
@@ -499,7 +540,10 @@ class _AddJournalPageState extends State<AddJournalPage> {
                     alignment: Alignment.centerLeft,
                     child: Text(
                       "Foto Jurnal",
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 16),

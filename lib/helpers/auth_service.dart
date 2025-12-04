@@ -1,5 +1,5 @@
 import 'supabase_helper.dart';
-import 'package:flutter_bcrypt/flutter_bcrypt.dart';
+import 'package:bcrypt/bcrypt.dart';
 
 class AuthService {
   AuthService._privateConstructor();
@@ -8,13 +8,13 @@ class AuthService {
   final _supabase = SupabaseHelper.client;
 
   // Register User (menggunakan tabel users custom, bukan Supabase Auth)
-  Future<Map<String, dynamic>?> registerUser(String username, String password) async {
+  Future<Map<String, dynamic>?> registerUser(
+    String username,
+    String password,
+  ) async {
     try {
       // Hash password
-      final hashedPassword = await FlutterBcrypt.hashPw(
-        password: password,
-        salt: await FlutterBcrypt.salt(),
-      );
+      final hashedPassword = BCrypt.hashpw(password, BCrypt.gensalt());
 
       // Check if username exists
       final existing = await _supabase
@@ -29,10 +29,11 @@ class AuthService {
       }
 
       // Insert new user
-      final response = await _supabase.from('users').insert({
-        'username': username,
-        'password': hashedPassword,
-      }).select().single();
+      final response = await _supabase
+          .from('users')
+          .insert({'username': username, 'password': hashedPassword})
+          .select()
+          .single();
 
       print("[AUTH] ✅ User registered: ${response['id']}");
       return response;
@@ -43,7 +44,10 @@ class AuthService {
   }
 
   // Login User
-  Future<Map<String, dynamic>?> loginUser(String username, String password) async {
+  Future<Map<String, dynamic>?> loginUser(
+    String username,
+    String password,
+  ) async {
     try {
       // Get user by username
       final user = await _supabase
@@ -58,10 +62,7 @@ class AuthService {
       }
 
       // Verify password
-      final isValid = await FlutterBcrypt.verify(
-        password: password,
-        hash: user['password'],
-      );
+      final isValid = BCrypt.checkpw(password, user['password']);
 
       if (!isValid) {
         print("[AUTH] ❌ Invalid password");

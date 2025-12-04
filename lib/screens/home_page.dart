@@ -3,6 +3,7 @@ import 'utilities_page.dart';
 import 'settings_page.dart';
 import 'home_tab_page.dart';
 import 'friends_page.dart';
+import 'profile_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -12,7 +13,8 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  int _selectedIndex = 0;  late final List<Widget> _pages;
+  int _selectedIndex = 0;
+  late final List<Widget> _pages;
   @override
   void initState() {
     super.initState();
@@ -21,6 +23,7 @@ class _HomePageState extends State<HomePage> {
       const FriendsPage(),
       const UtilitiesPage(),
       const SettingsPage(),
+      const ProfilePage(),
     ];
   }
 
@@ -54,9 +57,8 @@ class _HomePageState extends State<HomePage> {
             fontWeight: FontWeight.bold,
             fontSize: 12,
           ),
-          unselectedLabelStyle: const TextStyle(
-            fontSize: 12,
-          ),          items: const <BottomNavigationBarItem>[
+          unselectedLabelStyle: const TextStyle(fontSize: 12),
+          items: const <BottomNavigationBarItem>[
             BottomNavigationBarItem(
               icon: Icon(Icons.home_outlined),
               activeIcon: Icon(Icons.home),
@@ -76,6 +78,11 @@ class _HomePageState extends State<HomePage> {
               icon: Icon(Icons.settings_outlined),
               activeIcon: Icon(Icons.settings),
               label: 'Pengaturan',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.person_outline),
+              activeIcon: Icon(Icons.person),
+              label: 'Profil',
             ),
           ],
           currentIndex: _selectedIndex,

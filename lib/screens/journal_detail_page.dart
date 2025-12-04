@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:io';
 import '../helpers/journal_service.dart';
 import '../helpers/supabase_helper.dart';
-import '../helpers/location_helper.dart';
+import '../helpers/user_session.dart';
 import 'package:image_picker/image_picker.dart';
 
 class JournalDetailPage extends StatefulWidget {
@@ -21,6 +21,7 @@ class _JournalDetailPageState extends State<JournalDetailPage> {
   List<Map<String, dynamic>> _photos = [];
   bool _isLoading = true;
   bool _isEditMode = false;
+  bool _isOwner = false; // Check if current user is journal owner
   late TextEditingController _judulController;
   late TextEditingController _ceritaController;
   List<String> _photosToDelete = [];
@@ -41,19 +42,32 @@ class _JournalDetailPageState extends State<JournalDetailPage> {
     _judulController.dispose();
     _ceritaController.dispose();
     super.dispose();
-  }  void _loadJournalData() async {
+  }
+
+  void _loadJournalData() async {
     final journalData = await _journalService.getJournalById(widget.journalId);
+
+    // Check if current user is the owner
+    final currentUserId = UserSession.instance.currentUserId;
+    final journalUserId = journalData?['user_id'];
+    final isOwner = currentUserId == journalUserId;
 
     setState(() {
       _journal = journalData;
-      _photos = (journalData?['journal_photos'] as List?)
-          ?.cast<Map<String, dynamic>>() ?? [];
+      _isOwner = isOwner;
+      _photos =
+          (journalData?['journal_photos'] as List?)
+              ?.cast<Map<String, dynamic>>() ??
+          [];
       _judulController.text = journalData?['judul'] ?? '';
       _ceritaController.text = journalData?['cerita'] ?? '';
-      _selectedPrivacy = journalData?['privacy'] ?? 'public'; // NEW: Load privacy
+      _selectedPrivacy =
+          journalData?['privacy'] ?? 'public'; // NEW: Load privacy
       _isLoading = false;
     });
-  }  Future<void> _saveChanges() async {
+  }
+
+  Future<void> _saveChanges() async {
     try {
       // Update journal text and privacy
       final success = await _journalService.updateJournal(
@@ -92,7 +106,7 @@ class _JournalDetailPageState extends State<JournalDetailPage> {
       _photosToDelete.clear();
       _newPhotoPaths.clear();
       _loadJournalData();
-      
+
       setState(() {
         _isEditMode = false;
       });
@@ -108,10 +122,7 @@ class _JournalDetailPageState extends State<JournalDetailPage> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: $e'),
-            backgroundColor: Colors.red,
-          ),
+          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
         );
       }
     }
@@ -150,16 +161,77 @@ class _JournalDetailPageState extends State<JournalDetailPage> {
       }
     }
   }
+
+  Future<void> _pickPhotoFromCamera() async {
+    try {
+      final XFile? pickedFile = await _picker.pickImage(
+        source: ImageSource.camera,
+        imageQuality: 80,
+      );
+
+      if (pickedFile != null) {
+        setState(() {
+          _newPhotoPaths.add(pickedFile.path);
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Gagal mengambil gambar: $e"),
+            backgroundColor: const Color(0xFFFF6B4A),
+          ),
+        );
+      }
+    }
+  }
+
+  void _showPhotoSourceDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: Colors.white,
+          title: const Text('Pilih Sumber Foto'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.camera_alt, color: Color(0xFFFF6B4A)),
+                title: const Text('Kamera'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _pickPhotoFromCamera();
+                },
+              ),
+              ListTile(
+                leading: const Icon(
+                  Icons.photo_library,
+                  color: Color(0xFFFF6B4A),
+                ),
+                title: const Text('Galeri'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _pickPhotoFromGallery();
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   Future<void> _deleteJournal() async {
     try {
       // Delete photos from storage
       for (var photo in _photos) {
         await _supabaseHelper.deletePhoto(photo['photo_url']);
       }
-      
+
       // Delete journal (will cascade delete photos in database)
       final success = await _journalService.deleteJournal(widget.journalId);
-      
+
       if (!success) {
         throw Exception('Failed to delete journal');
       }
@@ -184,6 +256,7 @@ class _JournalDetailPageState extends State<JournalDetailPage> {
       }
     }
   }
+
   void _showDeleteConfirmation() {
     showDialog(
       context: context,
@@ -199,10 +272,7 @@ class _JournalDetailPageState extends State<JournalDetailPage> {
               onPressed: () {
                 Navigator.of(context).pop();
               },
-              child: const Text(
-                'Batal',
-                style: TextStyle(color: Colors.grey),
-              ),
+              child: const Text('Batal', style: TextStyle(color: Colors.grey)),
             ),
             TextButton(
               onPressed: () {
@@ -235,12 +305,12 @@ class _JournalDetailPageState extends State<JournalDetailPage> {
         appBar: AppBar(title: const Text("Error")),
         body: const Center(child: Text("Jurnal tidak ditemukan.")),
       );
-    }    String tanggal = _journal!['tanggal'].toString();
+    }
+    String tanggal = _journal!['tanggal'].toString();
     String tanggalFormatted = tanggal.substring(0, 10);
-    
-    String locationName =
-        _journal!['nama_lokasi'] ?? "Lokasi Tidak Diketahui";
-    locationName = LocationHelper.formatLocationName(locationName);
+
+    // Tampilkan alamat lengkap tanpa pemformatan
+    String locationName = _journal!['nama_lokasi'] ?? "Lokasi Tidak Diketahui";
 
     return Scaffold(
       backgroundColor: Colors.grey[50],
@@ -264,7 +334,7 @@ class _JournalDetailPageState extends State<JournalDetailPage> {
           },
         ),
         actions: [
-          if (!_isEditMode)
+          if (_isOwner && !_isEditMode)
             IconButton(
               icon: const Icon(Icons.edit),
               onPressed: () {
@@ -273,15 +343,12 @@ class _JournalDetailPageState extends State<JournalDetailPage> {
                 });
               },
             )
-          else ...[
+          else if (_isOwner && _isEditMode) ...[
             IconButton(
               icon: const Icon(Icons.delete),
               onPressed: _showDeleteConfirmation,
             ),
-            IconButton(
-              icon: const Icon(Icons.save),
-              onPressed: _saveChanges,
-            ),
+            IconButton(icon: const Icon(Icons.save), onPressed: _saveChanges),
           ],
         ],
       ),
@@ -295,16 +362,21 @@ class _JournalDetailPageState extends State<JournalDetailPage> {
                 height: 250,
                 child: ListView.builder(
                   scrollDirection: Axis.horizontal,
-                  itemCount: _photos.length + _newPhotoPaths.length + (_isEditMode ? 1 : 0),
+                  itemCount:
+                      _photos.length +
+                      _newPhotoPaths.length +
+                      (_isEditMode && _isOwner ? 1 : 0),
                   itemBuilder: (context, index) {
-                    if (_isEditMode && index == _photos.length + _newPhotoPaths.length) {
+                    if (_isEditMode &&
+                        _isOwner &&
+                        index == _photos.length + _newPhotoPaths.length) {
                       return Padding(
                         padding: EdgeInsets.only(
                           left: index == 0 ? 16 : 8,
                           right: 16,
                         ),
                         child: GestureDetector(
-                          onTap: _pickPhotoFromGallery,
+                          onTap: _showPhotoSourceDialog,
                           child: Container(
                             width: 250,
                             height: 250,
@@ -321,7 +393,7 @@ class _JournalDetailPageState extends State<JournalDetailPage> {
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 const Icon(
-                                  Icons.add,
+                                  Icons.add_a_photo,
                                   size: 60,
                                   color: Color(0xFFFF6B4A),
                                 ),
@@ -339,10 +411,11 @@ class _JournalDetailPageState extends State<JournalDetailPage> {
                           ),
                         ),
                       );
-                    }                    String path;
+                    }
+                    String path;
                     bool isNewPhoto = index >= _photos.length;
                     bool isLocalFile = false;
-                    
+
                     if (isNewPhoto) {
                       path = _newPhotoPaths[index - _photos.length];
                       isLocalFile = true;
@@ -356,54 +429,61 @@ class _JournalDetailPageState extends State<JournalDetailPage> {
                     return Padding(
                       padding: EdgeInsets.only(
                         left: index == 0 ? 16 : 8,
-                        right: index == _photos.length + _newPhotoPaths.length - 1 && !_isEditMode ? 16 : 8,
-                      ),                      child: Stack(
+                        right:
+                            index ==
+                                    _photos.length +
+                                        _newPhotoPaths.length -
+                                        1 &&
+                                !_isEditMode
+                            ? 16
+                            : 8,
+                      ),
+                      child: Stack(
                         children: [
                           ClipRRect(
                             borderRadius: BorderRadius.circular(12),
-                            child: isLocalFile 
-                              ? Image.file(
-                                  File(path),
-                                  width: 250,
-                                  height: 250,
-                                  fit: BoxFit.cover,
-                                  opacity: AlwaysStoppedAnimation(
-                                    isMarkedForDelete ? 0.5 : 1.0,
+                            child: isLocalFile
+                                ? Image.file(
+                                    File(path),
+                                    width: 250,
+                                    height: 250,
+                                    fit: BoxFit.cover,
+                                    opacity: AlwaysStoppedAnimation(
+                                      isMarkedForDelete ? 0.5 : 1.0,
+                                    ),
+                                    errorBuilder: (context, error, stackTrace) {
+                                      return Container(
+                                        width: 250,
+                                        height: 250,
+                                        color: Colors.grey[300],
+                                        child: const Icon(Icons.error),
+                                      );
+                                    },
+                                  )
+                                : Image.network(
+                                    path,
+                                    width: 250,
+                                    height: 250,
+                                    fit: BoxFit.cover,
+                                    opacity: AlwaysStoppedAnimation(
+                                      isMarkedForDelete ? 0.5 : 1.0,
+                                    ),
+                                    errorBuilder: (context, error, stackTrace) {
+                                      return Container(
+                                        width: 250,
+                                        height: 250,
+                                        color: Colors.grey[300],
+                                        child: const Icon(Icons.error),
+                                      );
+                                    },
                                   ),
-                                  errorBuilder: (context, error, stackTrace) {
-                                    return Container(
-                                      width: 250,
-                                      height: 250,
-                                      color: Colors.grey[300],
-                                      child: const Icon(Icons.error),
-                                    );
-                                  },
-                                )
-                              : Image.network(
-                                  path,
-                                  width: 250,
-                                  height: 250,
-                                  fit: BoxFit.cover,
-                                  opacity: AlwaysStoppedAnimation(
-                                    isMarkedForDelete ? 0.5 : 1.0,
-                                  ),
-                                  errorBuilder: (context, error, stackTrace) {
-                                    return Container(
-                                      width: 250,
-                                      height: 250,
-                                      color: Colors.grey[300],
-                                      child: const Icon(Icons.error),
-                                    );
-                                  },
-                                ),
                           ),
                           if (_isEditMode && !isNewPhoto)
                             Positioned(
                               top: 8,
                               right: 8,
                               child: GestureDetector(
-                                onTap: () =>
-                                    _togglePhotoForDelete(path),
+                                onTap: () => _togglePhotoForDelete(path),
                                 child: Container(
                                   decoration: BoxDecoration(
                                     color: isMarkedForDelete
@@ -433,7 +513,9 @@ class _JournalDetailPageState extends State<JournalDetailPage> {
                               child: GestureDetector(
                                 onTap: () {
                                   setState(() {
-                                    _newPhotoPaths.removeAt(index - _photos.length);
+                                    _newPhotoPaths.removeAt(
+                                      index - _photos.length,
+                                    );
                                   });
                                 },
                                 child: Container(
@@ -508,17 +590,20 @@ class _JournalDetailPageState extends State<JournalDetailPage> {
                           ),
                         ),
                       ),
-                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: const Color(0xFFFF6B4A),
-                      ),
-                    )                  else
+                      style: Theme.of(context).textTheme.headlineSmall
+                          ?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: const Color(0xFFFF6B4A),
+                          ),
+                    )
+                  else
                     Text(
                       _journal!['judul'],
-                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: const Color(0xFFFF6B4A),
-                      ),
+                      style: Theme.of(context).textTheme.headlineSmall
+                          ?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: const Color(0xFFFF6B4A),
+                          ),
                     ),
                   const SizedBox(height: 16),
 
@@ -554,10 +639,12 @@ class _JournalDetailPageState extends State<JournalDetailPage> {
                               style: Theme.of(context).textTheme.bodyMedium,
                             ),
                           ],
-                        ),                        const SizedBox(height: 12),
+                        ),
+                        const SizedBox(height: 12),
 
                         if (_journal!['nama_lokasi'] != null)
                           Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               const Icon(
                                 Icons.location_on,
@@ -568,9 +655,9 @@ class _JournalDetailPageState extends State<JournalDetailPage> {
                               Expanded(
                                 child: Text(
                                   locationName,
-                                  style:
-                                      Theme.of(context).textTheme.bodyMedium,
-                                  overflow: TextOverflow.ellipsis,
+                                  style: Theme.of(context).textTheme.bodyMedium,
+                                  maxLines: null,
+                                  softWrap: true,
                                 ),
                               ),
                             ],
@@ -587,7 +674,8 @@ class _JournalDetailPageState extends State<JournalDetailPage> {
                       color: const Color(0xFFFF6B4A),
                     ),
                   ),
-                  const SizedBox(height: 12),                  if (_isEditMode)
+                  const SizedBox(height: 12),
+                  if (_isEditMode)
                     Padding(
                       padding: const EdgeInsets.only(bottom: 30),
                       child: Column(
@@ -615,22 +703,31 @@ class _JournalDetailPageState extends State<JournalDetailPage> {
                                 ),
                               ),
                             ),
-                            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                              height: 1.8,
-                              color: Colors.black87,
-                            ),
+                            style: Theme.of(context).textTheme.bodyLarge
+                                ?.copyWith(height: 1.8, color: Colors.black87),
                           ),
                           const SizedBox(height: 16),
                           // NEW: Privacy Selector
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 8,
+                            ),
                             decoration: BoxDecoration(
-                              border: Border.all(color: const Color(0xFFFF6B4A), width: 2),
+                              border: Border.all(
+                                color: const Color(0xFFFF6B4A),
+                                width: 2,
+                              ),
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Row(
                               children: [
-                                const Icon(Icons.lock_outline, color: Color(0xFFFF6B4A)),
+                                Icon(
+                                  _selectedPrivacy == 'public'
+                                      ? Icons.public
+                                      : Icons.lock_outline,
+                                  color: Color(0xFFFF6B4A),
+                                ),
                                 const SizedBox(width: 12),
                                 Expanded(
                                   child: DropdownButton<String>(
@@ -640,7 +737,9 @@ class _JournalDetailPageState extends State<JournalDetailPage> {
                                     items: const [
                                       DropdownMenuItem(
                                         value: 'public',
-                                        child: Text('Public - Teman dapat melihat'),
+                                        child: Text(
+                                          'Public - Teman dapat melihat',
+                                        ),
                                       ),
                                       DropdownMenuItem(
                                         value: 'private',
@@ -676,7 +775,8 @@ class _JournalDetailPageState extends State<JournalDetailPage> {
                             offset: const Offset(0, 2),
                           ),
                         ],
-                      ),                      child: Text(
+                      ),
+                      child: Text(
                         _journal!['cerita'],
                         style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                           height: 1.8,

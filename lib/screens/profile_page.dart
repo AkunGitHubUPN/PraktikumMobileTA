@@ -4,6 +4,7 @@ import '../helpers/friend_service.dart';
 import '../helpers/user_session.dart';
 import '../helpers/supabase_helper.dart';
 import 'journal_detail_page.dart';
+import 'edit_profile_page.dart';
 import 'package:intl/intl.dart';
 
 class ProfilePage extends StatefulWidget {
@@ -16,9 +17,11 @@ class ProfilePage extends StatefulWidget {
 class _ProfilePageState extends State<ProfilePage> {
   final _journalService = JournalService.instance;
   final _friendService = FriendService();
-  
+
   bool _isLoading = true;
   String _username = '';
+  String? _photoUrl;
+  String? _hobby;
   int _journalCount = 0;
   int _friendCount = 0;
   List<Map<String, dynamic>> _journals = [];
@@ -28,35 +31,52 @@ class _ProfilePageState extends State<ProfilePage> {
     super.initState();
     _loadProfileData();
   }
+
   Future<void> _loadProfileData() async {
     setState(() => _isLoading = true);
-    
+
     try {
       final userId = UserSession.instance.currentUserId;
-      
-      if (userId == null) return;
+      print('[PROFILE] Current userId: $userId');
+
+      if (userId == null) {
+        print('[PROFILE] ❌ userId is null');
+        return;
+      }
 
       // Get username from database
       final supabase = SupabaseHelper.client;
+      print('[PROFILE] Fetching user data...');
       final userData = await supabase
           .from('users')
-          .select('username')
+          .select('username, photo_url, hobby')
           .eq('id', userId)
           .single();
+      print('[PROFILE] User data: $userData');
 
       // Load data
+      print('[PROFILE] Fetching journals...');
       final journals = await _journalService.getJournalsForUser();
+      print('[PROFILE] Journals loaded: ${journals.length}');
+
+      print('[PROFILE] Fetching friends...');
       final friends = await _friendService.getFriends();
-      
+      print('[PROFILE] Friends loaded: ${friends.length}');
+
       setState(() {
         _username = userData['username'] ?? 'User';
+        _photoUrl = userData['photo_url'];
+        _hobby = userData['hobby'];
         _journalCount = journals.length;
         _friendCount = friends.length;
         _journals = journals;
         _isLoading = false;
       });
-    } catch (e) {
-      print('[PROFILE] Error loading data: $e');
+
+      print('[PROFILE] ✅ Profile loaded successfully');
+    } catch (e, stackTrace) {
+      print('[PROFILE] ❌ Error loading data: $e');
+      print('[PROFILE] ❌ Stack trace: $stackTrace');
       setState(() => _isLoading = false);
     }
   }
@@ -70,6 +90,27 @@ class _ProfilePageState extends State<ProfilePage> {
         backgroundColor: const Color(0xFFFF6B4A),
         foregroundColor: Colors.white,
         elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.edit),
+            onPressed: () async {
+              final result = await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => EditProfilePage(
+                    currentUsername: _username,
+                    currentPhotoUrl: _photoUrl,
+                    currentHobby: _hobby,
+                  ),
+                ),
+              );
+              if (result == true) {
+                _loadProfileData();
+              }
+            },
+            tooltip: 'Edit Profil',
+          ),
+        ],
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -83,19 +124,22 @@ class _ProfilePageState extends State<ProfilePage> {
                     Container(
                       width: double.infinity,
                       padding: const EdgeInsets.all(24),
-                      decoration: const BoxDecoration(
-                        color: Color(0xFFFF6B4A),
-                      ),
+                      decoration: const BoxDecoration(color: Color(0xFFFF6B4A)),
                       child: Column(
                         children: [
-                          const CircleAvatar(
+                          CircleAvatar(
                             radius: 50,
                             backgroundColor: Colors.white,
-                            child: Icon(
-                              Icons.person,
-                              size: 50,
-                              color: Color(0xFFFF6B4A),
-                            ),
+                            backgroundImage: _photoUrl != null
+                                ? NetworkImage(_photoUrl!)
+                                : null,
+                            child: _photoUrl == null
+                                ? const Icon(
+                                    Icons.person,
+                                    size: 50,
+                                    color: Color(0xFFFF6B4A),
+                                  )
+                                : null,
                           ),
                           const SizedBox(height: 16),
                           Text(
@@ -106,11 +150,48 @@ class _ProfilePageState extends State<ProfilePage> {
                               color: Colors.white,
                             ),
                           ),
+                          if (_hobby != null && _hobby!.isNotEmpty) ...[
+                            const SizedBox(height: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 8,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.2),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(
+                                    Icons.favorite,
+                                    size: 16,
+                                    color: Colors.white,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Flexible(
+                                    child: Text(
+                                      _hobby!,
+                                      style: const TextStyle(
+                                        fontSize: 14,
+                                        color: Colors.white,
+                                      ),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                           const SizedBox(height: 20),
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                             children: [
-                              _buildStatItem('Jurnal', _journalCount.toString()),
+                              _buildStatItem(
+                                'Jurnal',
+                                _journalCount.toString(),
+                              ),
                               Container(
                                 width: 1,
                                 height: 40,
@@ -122,9 +203,9 @@ class _ProfilePageState extends State<ProfilePage> {
                         ],
                       ),
                     ),
-                    
+
                     const SizedBox(height: 16),
-                    
+
                     // Journals Section
                     Padding(
                       padding: const EdgeInsets.all(16),
@@ -152,7 +233,7 @@ class _ProfilePageState extends State<ProfilePage> {
                             ],
                           ),
                           const SizedBox(height: 16),
-                          
+
                           if (_journals.isEmpty)
                             Center(
                               child: Padding(
@@ -209,10 +290,7 @@ class _ProfilePageState extends State<ProfilePage> {
         const SizedBox(height: 4),
         Text(
           label,
-          style: TextStyle(
-            fontSize: 14,
-            color: Colors.white.withOpacity(0.9),
-          ),
+          style: TextStyle(fontSize: 14, color: Colors.white.withOpacity(0.9)),
         ),
       ],
     );
@@ -220,27 +298,25 @@ class _ProfilePageState extends State<ProfilePage> {
 
   Widget _buildJournalCard(Map<String, dynamic> journal) {
     final privacy = journal['privacy'] ?? 'public';
-    final photos = (journal['journal_photos'] as List?)?.cast<Map<String, dynamic>>() ?? [];
+    final photos =
+        (journal['journal_photos'] as List?)?.cast<Map<String, dynamic>>() ??
+        [];
     final firstPhotoUrl = photos.isNotEmpty ? photos[0]['photo_url'] : null;
-    
+
     final tanggal = journal['tanggal'] != null
         ? DateTime.parse(journal['tanggal'])
         : null;
-    
+
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: InkWell(
         onTap: () {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => JournalDetailPage(
-                journalId: journal['id'],
-              ),
+              builder: (context) => JournalDetailPage(journalId: journal['id']),
             ),
           ).then((_) => _loadProfileData());
         },
@@ -283,9 +359,9 @@ class _ProfilePageState extends State<ProfilePage> {
                     size: 40,
                   ),
                 ),
-              
+
               const SizedBox(width: 12),
-              
+
               // Content
               Expanded(
                 child: Column(
@@ -305,12 +381,10 @@ class _ProfilePageState extends State<ProfilePage> {
                           ),
                         ),
                         Icon(
-                          privacy == 'private' 
-                              ? Icons.lock 
-                              : Icons.public,
+                          privacy == 'private' ? Icons.lock : Icons.public,
                           size: 16,
-                          color: privacy == 'private' 
-                              ? Colors.grey[600] 
+                          color: privacy == 'private'
+                              ? Colors.grey[600]
                               : const Color(0xFFFF6B4A),
                         ),
                       ],
@@ -319,18 +393,12 @@ class _ProfilePageState extends State<ProfilePage> {
                     if (tanggal != null)
                       Text(
                         DateFormat('d MMMM yyyy').format(tanggal),
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey[600],
-                        ),
+                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                       ),
                     const SizedBox(height: 4),
                     Text(
                       journal['cerita'] ?? '',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey[700],
-                      ),
+                      style: TextStyle(fontSize: 14, color: Colors.grey[700]),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
